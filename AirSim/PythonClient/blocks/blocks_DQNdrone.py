@@ -1,5 +1,6 @@
 import sys
 import os
+import logging
 
 os.chdir(os.path.dirname(__file__))
 sys.path.append(os.path.realpath(".."))
@@ -8,6 +9,8 @@ from AirSimClient import *
 
 from action_space import DefaultActionSpace, GridActionSpace
 from reward import PathReward
+from constants import RootConfigKeys, ActionConfigKeys, \
+        RewardConfigKeys, RewardConstants, ActionConstants
 
 from argparse import ArgumentParser
 
@@ -516,6 +519,7 @@ if __name__ == "__main__":
                 "initY" : -31.9786,
                 "initZ" : -19.0225,
                 "use_flag_position": False,
+                "action_space_type":
     }
     with open("drone_config.json", "w") as f:
         json.dump(default_config, f)

@@ -1,9 +1,10 @@
 class DefaultActionSpace(object):
-    def __init__(self):
-        pass
+    def __init__(self, scaling_factor=0.25):
+        self.scaling_factor = scaling_factor
+        self.num_actions = 7
 
     def interpret_action(self, action):
-        scaling_factor = 0.25
+        scaling_factor = self.scaling_factor
         if action == 0:
             quad_offset = (0, 0, 0)
         elif action == 1:
@@ -21,7 +22,7 @@ class DefaultActionSpace(object):
         return quad_offset
 
     def get_num_actions(self):
-        return 7
+        return self.num_actions
 
 class GridActionSpace(object):
 
