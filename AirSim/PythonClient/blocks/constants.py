@@ -6,9 +6,17 @@ class RootConfigKeys(object):
     INIT_X = "initX"
     INIT_Y = "initY"
     INIT_Z = "initZ"
+    MOVE_DURATION = "move_duration"
     USE_FLAG_POS = "use_flag_position"
     ACTION_SPACE_TYPE = "action_space_type"
     REWARD_TYPE = "reward_type"
+    ACTION_CONFIG = "action_config"
+    REWARD_CONFIG = "reward_config"
+    EPOCH_COUNT = "epoch_number"
+    MAX_STEPS_MUL = "max_steps_mul"
+    MEMORY_SIZE = "memory_size"
+    TARGET_UPDATE_INTERVAL = "target_update_interval"
+    TRAIN_INTERVAL = "train_interval"
 
 
 class ActionConfigKeys(object):
@@ -21,7 +29,7 @@ class RewardConfigKeys(object):
     THRESH_DIST = "thresh_dist"
 
     EXPLORE_USED_CAMS_LIST = "used_cams"
-    EXPLORE_ VEHICLE_RAD = "vehicle_radius"
+    EXPLORE_VEHICLE_RAD = "vehicle_radius"
     EXPLORE_GOAL_ID = "goal_id"
     EXPLORE_MAX_HEIGHT = "max_height"
     EXPLORE_HEIGHT_PENALTY = "height_penalty"

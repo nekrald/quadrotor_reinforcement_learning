@@ -12,6 +12,12 @@ class ExplorationReward(object):
         self.max_height = max_height
         self.height_penalty = height_penalty
 
+    def isDone(self, reward):
+        done = 0
+        if reward <= self.collision_penalty:
+            done = 1
+        return done
+
     def compute_reward(self, quad_state, quad_vel, collision_info):
         if collision_info.has_collided:
             reward = self.collision_penalty
@@ -24,7 +30,7 @@ class ExplorationReward(object):
             max_depth_vis = -INF
             max_depth_planner = -INF
             for camera_id in used_cams:
-               requests = [
+                requests = [
                     ImageRequest(camera_id, query, True, False)
                     for query in [
                         AirSimImageType.DepthPerspective,
@@ -73,6 +79,13 @@ class PathReward(object):
         self.large_dist_penalty = large_dist_penalty
         self.client = client
 
+    def isDone(self, reward):
+        done = 0
+        if reward <= self.collision_penalty \
+                or reward <= self.large_dist_penalty:
+            done = 1
+        return done
+
     def compute_reward(self, quad_state, quad_vel, collision_info):
         thresh_dist = self.thresh_dist
         beta = self.beta
@@ -98,4 +111,7 @@ class PathReward(object):
 
         return reward
 
+def make_reward(config, client):
+    reward_config = config[RootConfigKeys.REWARD_CONFIG]
+    raise NotImplementedError()
 

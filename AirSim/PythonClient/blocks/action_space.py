@@ -39,4 +39,6 @@ class GridActionSpace(object):
     def get_num_actions(self):
         return self.grid_size * self.grid_size
 
-
+def make_action(config):
+    action_config = config[RootConfigKeys.ACTION_CONFIG]
+    raise NotImplementedError()
