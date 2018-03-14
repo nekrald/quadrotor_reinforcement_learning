@@ -1,6 +1,10 @@
+import logging
+import numpy as np
+
+
 class ExplorationReward(object):
-    def __init__(self, client, collision_penalty = -200,
-            height_penalty=-100,
+    def __init__(self, client,
+            collision_penalty=-200, height_penalty=-100,
             used_cams=[3], vehicle_rad=0.5, thresh_dist=3,
             goal_id=0, max_height = 40):
         self.collision_penalty = collision_penalty
@@ -46,14 +50,15 @@ class ExplorationReward(object):
                     np.max(np.array(responses[2].image_data_float)))
             goals = [max_depth_perspective, max_depth_vis,
                         max_depth_planner]
-            print("ExplorationReward: these are the goals = ", goals)
+            logging.debug("ExplorationReward: these are the goals = {}".format(goals))
             dist = goals[self.goal_id]
             reward = (dist - self.vehicle_rad) / (self.tau_d - self.vehicle_rad)
-            print("ExplorationReward: before truncating we have = ", reward)
+            logging.debug("ExplorationReward: before truncating we have = {}".format(reward))
             reward = min(reward, 1)
-            print("ExplorationReward: after truncation we obtained: ", reward)
+            logging.debug("ExplorationReward: after truncation we obtained {}".format(reward))
 
         return reward
+
 
 class PathReward(object):
 
@@ -110,6 +115,7 @@ class PathReward(object):
                 reward = reward_dist + reward_speed
 
         return reward
+
 
 def make_reward(config, client):
     reward_config = config[RootConfigKeys.REWARD_CONFIG]
