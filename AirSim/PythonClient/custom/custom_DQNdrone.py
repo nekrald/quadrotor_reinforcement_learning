@@ -50,11 +50,18 @@ def main(config, args):
         initY = initial_position.y_val
         initZ = initial_position.z_val
 
-
-
+    logging.info("Next calling goHome()")
     client.goHome()
+    logging.info("goHome() returned")
+
+    logging.info("Next calling takeoff()")
     client.takeoff()
+    logging.info("takeoff() returned")
+
+    logging.info("Next calling moveToPosition")
     client.moveToPosition(initX, initY, initZ, 5)
+    logging.info("moveToPosition returned")
+
     time.sleep(config[RootConfigKeys.SLEEP_TIME])
 
     # Train
@@ -89,6 +96,8 @@ def main(config, args):
     move_duration = config[RootConfigKeys.MOVE_DURATION]
 
     while current_step < max_steps:
+        logging.info("Processing current_step={}".format(current_step))
+
         action = agent.act(current_state)
         quad_offset = action_processor.interpret_action(action)
         quad_vel = client.getVelocity()
@@ -112,9 +121,15 @@ def main(config, args):
         agent.train()
 
         if done:
+            logging.info("Next calling goHome()")
             client.goHome()
+            logging.info("goHome() returned")
+            logging.info("Next calling takeoff()")
             client.takeoff()
+            logging.info("takeoff() returned")
+            logging.info("Next calling moveToPosition")
             client.moveToPosition(initX, initY, initZ, 5)
+            logging.info("moveToPosition returned")
             time.sleep(config[RootConfigKeys.SLEEP_TIME])
         current_step +=1
 
