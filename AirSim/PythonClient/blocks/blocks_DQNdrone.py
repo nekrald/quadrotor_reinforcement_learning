@@ -4,9 +4,11 @@ import logging
 import csv
 import json
 import copy
+import shutil
+import argparse
 
 import numpy as np
-from argparse import ArgumentParser
+
 
 file_dir = os.path.dirname(__file__)
 upper_dir = os.path.realpath(os.path.join(file_dir, ".."))
@@ -154,6 +156,19 @@ def init_and_dump_configs():
         with open("config-example/" + name + ".json", "w") as f:
             json.dump(config, f, indent=4)
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='DQNdrone for AirSim')
+    parser.add_argument('config', metavar='CONFIG', type=str, help='path-to-file-with-config')
+    parser.add_argument('--traindir', default='traindir', type=str, metavar='DIR', help='path-to-traindir')
+    args = parser.parse_args()
+    return args
 
 if __name__ == "__main__":
-    main()
+    args = parse_arguments()
+    if not os.path.exists(args.traindir):
+        os.makedirs(args.traindir)
+    shutil.copy(args.config, os.path.join(os.path.realpath(args.traindir), "config.json"))
+    with open(args.config, "r") as fconf:
+        config = json.load(fconf)
+    main(config, args)
+
