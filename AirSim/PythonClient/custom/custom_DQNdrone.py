@@ -82,7 +82,8 @@ def main(config, args):
     agent = DeepQAgent((NumBufferFrames, SizeRows, SizeCols),
         NumActions, monitor=True, train_after=train_after,
         memory_size=memory_size, train_interval=train_interval,
-        target_update_interval=update_interval, traindir_path=args.traindir)
+        target_update_interval=update_interval, traindir_path=args.traindir,
+        checkpoint_path=args.checkpoint)
     move_duration = config[RootConfigKeys.MOVE_DURATION]
 
     while current_step < max_steps:
@@ -161,6 +162,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='DQNdrone for AirSim')
     parser.add_argument('config', metavar='CONFIG', type=str, help='path-to-file-with-config')
     parser.add_argument('--traindir', default='traindir', type=str, metavar='DIR', help='path-to-traindir')
+    parser.add_argument('--checkpoint', default=None, type=str, metavar='DNN', help='path-to-checkpoint')
     args = parser.parse_args()
     return args
 
@@ -171,6 +173,6 @@ if __name__ == "__main__":
     shutil.copy(args.config, os.path.join(os.path.realpath(args.traindir), "config.json"))
     with open(args.config, "r") as fconf:
         config = json.load(fconf)
-    configure_logging()
+    configure_logging(os.path.join(args.traindir, "main.log"))
     main(config, args)
 

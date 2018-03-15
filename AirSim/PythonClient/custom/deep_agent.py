@@ -76,7 +76,7 @@ class DeepQAgent(object):
                  gamma=0.99, explorer=LinearEpsilonAnnealingExplorer(1, 0.1, 1000000),
                  learning_rate=0.00025, momentum=0.95, minibatch_size=32,
                  memory_size=500000, train_after=10000, train_interval=4, target_update_interval=10000,
-                 monitor=True, traindir_path="traindir"):
+                 monitor=True, traindir_path="traindir", checkpoint_path=None):
         self.input_shape = input_shape
         self.nb_actions = nb_actions
         self.gamma = gamma
@@ -148,6 +148,9 @@ class DeepQAgent(object):
                 log_dir=metrics_path, model=criterion) if monitor else None
         self._learner = l_sgd
         self._trainer = Trainer(criterion, (criterion, None), l_sgd, self._metrics_writer)
+
+        if checkpoint_path is not None:
+            self._trainer.restore_from_checkpoint(checkpoint_path)
 
     def act(self, state):
         """ This allows the agent to select the next action to perform in regard of the current state of the environment.
