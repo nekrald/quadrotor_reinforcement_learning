@@ -1,5 +1,6 @@
 import os
 
+
 class RootConfigKeys(object):
     TRAIN_AFTER = "train_after"
     SLEEP_TIME = "sleep_time"
@@ -8,8 +9,6 @@ class RootConfigKeys(object):
     INIT_Z = "initZ"
     MOVE_DURATION = "move_duration"
     USE_FLAG_POS = "use_flag_position"
-    ACTION_SPACE_TYPE = "action_space_type"
-    REWARD_TYPE = "reward_type"
     ACTION_CONFIG = "action_config"
     REWARD_CONFIG = "reward_config"
     EPOCH_COUNT = "epoch_number"
@@ -20,6 +19,7 @@ class RootConfigKeys(object):
 
 
 class ActionConfigKeys(object):
+    ACTION_SPACE_TYPE = "action_space_type"
     SCALING_FACTOR = "scaling_factor"
     GRID_SIZE = "grid_size"
 
@@ -27,6 +27,7 @@ class ActionConfigKeys(object):
 class RewardConfigKeys(object):
     COLLISION_PENALTY = "collision_penalty"
     THRESH_DIST = "thresh_dist"
+    REWARD_TYPE = "reward_type"
 
     EXPLORE_USED_CAMS_LIST = "used_cams"
     EXPLORE_VEHICLE_RAD = "vehicle_radius"

@@ -2,7 +2,6 @@ from action_space import DefaultActionSpace, GridActionSpace
 from reward import PathReward
 from replay_memory import ReplayMemory
 from history import History
-from agent import DeepQAgent, huber_loss
 from exploration import LinearEpsilonAnnealingExplorer
 from constants import RootConfigKeys, ActionConfigKeys, \
         RewardConfigKeys, RewardConstants, ActionConstants

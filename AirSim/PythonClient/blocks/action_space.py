@@ -1,3 +1,11 @@
+from enum import Enum
+
+
+class ActionSpaceType(object):
+    DEFAULT_SPACE = 'default'
+    GRID_SPACE = 'grid'
+
+
 class DefaultActionSpace(object):
     def __init__(self, scaling_factor=0.25):
         self.scaling_factor = scaling_factor
@@ -24,6 +32,7 @@ class DefaultActionSpace(object):
     def get_num_actions(self):
         return self.num_actions
 
+
 class GridActionSpace(object):
 
     def __init__(self, grid_size=0):
@@ -38,6 +47,7 @@ class GridActionSpace(object):
 
     def get_num_actions(self):
         return self.grid_size * self.grid_size
+
 
 def make_action(config):
     action_config = config[RootConfigKeys.ACTION_CONFIG]

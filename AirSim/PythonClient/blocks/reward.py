@@ -1,6 +1,11 @@
 import logging
 import numpy as np
 
+from enum import Enum
+
+class RewardType(object):
+    EXPLORATION_REWARD = "exploration"
+    PATH_REWARD = "path"
 
 class ExplorationReward(object):
     def __init__(self, client,
@@ -30,10 +35,10 @@ class ExplorationReward(object):
         else:
             client = self.client
             INF = 1e100
-            max_depth_perspective = -INF
-            max_depth_vis = -INF
-            max_depth_planner = -INF
-            for camera_id in used_cams:
+            min_depth_perspective = -INF
+            min_depth_vis = -INF
+            min_depth_planner = -INF
+            for camera_id in self.used_cams:
                 requests = [
                     ImageRequest(camera_id, query, True, False)
                     for query in [
@@ -42,14 +47,14 @@ class ExplorationReward(object):
                         AirSimImageType.DepthPlanner,
                     ]]
                 responses = client.simGetImages(requests)
-                max_depth_planner = max(max_depth_planner,
-                    np.max(np.array(responses[0].image_data_float)))
-                max_depth_vis = max(max_depth_vis,
-                    np.max(np.array(responses[1].image_data_float)))
-                max_depth_planner = max(max_depth_planner,
-                    np.max(np.array(responses[2].image_data_float)))
-            goals = [max_depth_perspective, max_depth_vis,
-                        max_depth_planner]
+                min_depth_planner = min(min_depth_planner,
+                    np.min(np.array(responses[0].image_data_float)))
+                min_depth_vis = min(min_depth_vis,
+                    np.min(np.array(responses[1].image_data_float)))
+                min_depth_planner = min(min_depth_planner,
+                    np.min(np.array(responses[2].image_data_float)))
+            goals = [min_depth_perspective, min_depth_vis,
+                        min_depth_planner]
             logging.debug("ExplorationReward: these are the goals = {}".format(goals))
             dist = goals[self.goal_id]
             reward = (dist - self.vehicle_rad) / (self.tau_d - self.vehicle_rad)
@@ -115,6 +120,8 @@ class PathReward(object):
                 reward = reward_dist + reward_speed
 
         return reward
+
+
 
 
 def make_reward(config, client):

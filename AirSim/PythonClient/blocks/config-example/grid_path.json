@@ -1,0 +1,26 @@
+{
+    "train_after": 1000,
+    "sleep_time": 0.1,
+    "initX": -0.55265,
+    "initY": -31.9786,
+    "initZ": -19.0225,
+    "move_duration": 4,
+    "use_flag_position": true,
+    "epoch_number": 100,
+    "max_steps_mul": 10000,
+    "memory_size": 5000,
+    "target_update_interval": 50000,
+    "train_interval": 4,
+    "action_config": {
+        "action_space_type": "grid",
+        "scaling_factor": 0.25
+    },
+    "reward_config": {
+        "collision_penalty": -1000,
+        "thresh_dist": 7,
+        "reward_type": "path",
+        "path_beta": 1.0,
+        "points_list": null,
+        "large_dist_penalty": -10
+    }
+}

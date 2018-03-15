@@ -1,6 +1,12 @@
 import sys
 import os
 import logging
+import csv
+import json
+import copy
+
+import numpy as np
+from argparse import ArgumentParser
 
 file_dir = os.path.dirname(__file__)
 upper_dir = os.path.realpath(os.path.join(file_dir, ".."))
@@ -10,31 +16,18 @@ del upper_dir
 
 from AirSimClient import *
 
-from action_space import DefaultActionSpace, GridActionSpace
-from reward import PathReward
+from action_space import DefaultActionSpace, \
+    GridActionSpace, make_action, ActionSpaceType
+from reward import PathReward, make_reward, RewardType
 from replay_memory import ReplayMemory
 from history import History
-from agent import DeepQAgent, huber_loss, transform_input
+from deep_agent import DeepQAgent, huber_loss, transform_input
 from exploration import LinearEpsilonAnnealingExplorer
 from constants import RootConfigKeys, ActionConfigKeys, \
         RewardConfigKeys, RewardConstants, ActionConstants
 from dqn_log import configure_logging
-
-from argparse import ArgumentParser
-
-import numpy as np
-from cntk.core import Value
-from cntk.initializer import he_uniform
-from cntk.layers import Sequential, Convolution2D, Dense, default_options
-from cntk.layers.typing import Signature, Tensor
-from cntk.learners import adam, learning_rate_schedule, momentum_schedule, UnitType
-from cntk.logging import TensorBoardProgressWriter
-from cntk.ops import abs, argmax, element_select, less, relu, reduce_max, reduce_sum, square
-from cntk.ops.functions import CloneMethod, Function
-from cntk.train import Trainer
-
-import csv
-import json
+from config import make_default_root_config,\
+        make_default_action_config, make_default_reward_config
 
 
 def main(config, args):
@@ -124,21 +117,43 @@ def main(config, args):
         current_state = transform_input(responses)
 
 
+def init_and_dump_configs():
+    config_grid_path = make_default_root_config()
+    config_grid_explore = make_default_root_config()
+
+    config_default_path = make_default_root_config()
+    config_default_explore = make_default_root_config()
+
+    reward_explore = make_default_reward_config(
+            RewardType.EXPLORATION_REWARD)
+    reward_path = make_default_reward_config(
+            RewardType.PATH_REWARD)
+
+    action_grid = make_default_action_config(
+            ActionSpaceType.GRID_SPACE)
+    action_default = make_default_action_config(
+            ActionSpaceType.DEFAULT_SPACE)
+
+    for item in [config_grid_path, config_default_path]:
+        item[RootConfigKeys.REWARD_CONFIG] = reward_path
+    for item in [config_grid_explore, config_default_explore]:
+        item[RootConfigKeys.REWARD_CONFIG] = reward_explore
+    for item in [config_grid_path, config_grid_explore]:
+        item[RootConfigKeys.ACTION_CONFIG] = action_grid
+    for item in [config_default_path, config_default_explore]:
+        item[RootConfigKeys.ACTION_CONFIG] = action_default
+
+    names = ["grid_path", "default_path", \
+            "grid_explore", "default_explore"]
+    items = [config_grid_path, config_default_path, \
+            config_grid_explore, config_default_explore]
+
+    if not os.path.exists("config-example"):
+        os.makedirs("config-example")
+    for config, name in zip(items, names):
+        with open("config-example/" + name + ".json", "w") as f:
+            json.dump(config, f, indent=4)
+
+
 if __name__ == "__main__":
-    default_config = {
-                "train_after" : 1000,
-                "sleep_time"  : 0.1,
-                "initX" : -.55265,
-                "initY" : -31.9786,
-                "initZ" : -19.0225,
-                "use_flag_position": False,
-                "action_space_type": "w"
-    }
-    with open("drone_config.json", "w") as f:
-        json.dump(default_config, f)
-    config = default_config
-#    with open("drone_config.json", "r") as f:
-#        config = json.load(f)
-    print(config)
-    quit()
     main()
