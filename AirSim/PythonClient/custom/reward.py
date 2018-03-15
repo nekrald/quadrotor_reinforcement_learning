@@ -2,10 +2,13 @@ import logging
 import numpy as np
 
 from enum import Enum
+from constants import RewardConfigKeys, RootConfigKeys
+
 
 class RewardType(object):
     EXPLORATION_REWARD = "exploration"
     PATH_REWARD = "path"
+
 
 class ExplorationReward(object):
     def __init__(self, client,
@@ -55,13 +58,17 @@ class ExplorationReward(object):
                     np.min(np.array(responses[2].image_data_float)))
             goals = [min_depth_perspective, min_depth_vis,
                         min_depth_planner]
-            logging.debug("ExplorationReward: these are the goals = {}".format(goals))
+            logging.debug(
+                "ExplorationReward: these are the goals = {}".format(
+                    goals))
             dist = goals[self.goal_id]
-            reward = (dist - self.vehicle_rad) / (self.tau_d - self.vehicle_rad)
-            logging.debug("ExplorationReward: before truncating we have = {}".format(reward))
+            reward = (dist - self.vehicle_rad) / (
+                    self.tau_d - self.vehicle_rad)
+            logging.debug("ExplorationReward: before truncating" + \
+                    " we have = {}".format(reward))
             reward = min(reward, 1)
-            logging.debug("ExplorationReward: after truncation we obtained {}".format(reward))
-
+            logging.debug("ExplorationReward: after truncation" + \
+                    " we obtained {}".format(reward))
         return reward
 
 
@@ -99,32 +106,64 @@ class PathReward(object):
     def compute_reward(self, quad_state, quad_vel, collision_info):
         thresh_dist = self.thresh_dist
         beta = self.beta
-
         pts = self.points
-
-        quad_pt = np.array(list((quad_state.x_val, quad_state.y_val, quad_state.z_val)))
-
+        quad_pt = np.array(list((quad_state.x_val, quad_state.y_val,
+            quad_state.z_val)))
         if collision_info.has_collided:
             reward = self.collision_penalty
         else:
             dist = 10000000
             for i in range(0, len(pts)-1):
-                dist = min(dist, np.linalg.norm(np.cross((quad_pt - pts[i]), (quad_pt - pts[i+1])))/np.linalg.norm(pts[i]-pts[i+1]))
-
-            #print(dist)
+                dist = min(dist, np.linalg.norm(
+                    np.cross((quad_pt - pts[i]),
+                    (quad_pt - pts[i+1]))) / np.linalg.norm(
+                        pts[i]-pts[i+1]))
             if dist > thresh_dist:
                 reward = self.large_dist_penalty
             else:
                 reward_dist = (math.exp(-beta*dist) - 0.5)
-                reward_speed = (np.linalg.norm([quad_vel.x_val, quad_vel.y_val, quad_vel.z_val]) - 0.5)
+                reward_speed = (np.linalg.norm([quad_vel.x_val,
+                    quad_vel.y_val, quad_vel.z_val]) - 0.5)
                 reward = reward_dist + reward_speed
-
         return reward
-
-
 
 
 def make_reward(config, client):
     reward_config = config[RootConfigKeys.REWARD_CONFIG]
-    raise NotImplementedError()
+    reward_type = reward_config[RewardConfigKeys.REWARD_TYPE]
+    collision_penalty = reward_config[
+            RewardConfigKeys.COLLISION_PENALTY]
+    thresh_dist = reward_config[
+            RewardConfigKeys.THRESH_DIST]
+    reward_type = reward_config[
+            RewardConfigKeys.REWARD_TYPE]
+
+    reward = None
+    if reward_type == RewardType.EXPLORATION_REWARD:
+        used_cams = reward_config[
+                RewardConfigKeys.EXPLORE_USED_CAMS_LIST]
+        vehicle_rad = reward_config[
+                RewardConfigKeys.EXPLORE_VEHICLE_RAD]
+        goal_id = reward_config[
+                RewardConfigKeys.EXPLORE_GOAL_ID]
+        max_height = reward_config[
+                RewardConfigKeys.EXPLORE_MAX_HEIGHT]
+        height_penalty = reward_config[
+                RewardConfigKeys.EXPLORE_HEIGHT_PENALTY]
+        reward = ExplorationReward(client,
+            collision_penalty, height_penalty,
+            used_cams, vehicle_rad, thresh_dist,
+            goal_id, max_height):
+    elif reward_type == RewardType.PATH_REWARD:
+        points = reward_config[
+                RewardConfigKeys.PATH_POINTS_LIST]
+        beta = reward_config[
+                RewardConfigKeys.PATH_BETA]
+        dist_penalty = reward_config[
+                RewardConfigKeys.PATH_LARGE_DIST_PENALTY]
+        reward = PathReward(points, thresh_dist, beta,
+            collision_penalty, dist_penalty, client)
+    else:
+        raise ValueError("Unknown reward type!")
+    return reward
 
