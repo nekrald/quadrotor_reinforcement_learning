@@ -1,4 +1,5 @@
 from enum import Enum
+from constants import ActionConfigKeys, RootConfigKeys
 
 
 class ActionSpaceType(object):
@@ -35,12 +36,13 @@ class DefaultActionSpace(object):
 
 class GridActionSpace(object):
 
-    def __init__(self, grid_size=0):
+    def __init__(self, scaling_factor=0.25, grid_size=0):
         self.grid_size  = grid_size
+        self.scaling_factor = scaling_factor
 
     def interpret_action(self, action):
-        scaling_factor = 0.25
         assert action < grid_size * grid_size
+        scaling_factor = self.scaling_factor
         dx = scaling_factor
         dy = scaling_factor * action / grid_size
         dz = scaling_factor * action % grid_size
@@ -51,4 +53,11 @@ class GridActionSpace(object):
 
 def make_action(config):
     action_config = config[RootConfigKeys.ACTION_CONFIG]
-    raise NotImplementedError()
+    scale_factor = config[ActionConfigKeys.SCALING_FACTOR]
+    if action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.DEFAULT_SPACE:
+        action = DefaultActionSpace(scale_factor)
+    elif action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.GRID_SPACE:
+        action = GridActionSpace(scale_factor, config[ActionConfigKeys.GRID_SIZE])
+    else:
+        raise ValueError("Unexpected ActionSpaceType.")
+    return action
