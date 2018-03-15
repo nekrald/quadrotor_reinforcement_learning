@@ -153,7 +153,7 @@ def make_reward(config, client):
         reward = ExplorationReward(client,
             collision_penalty, height_penalty,
             used_cams, vehicle_rad, thresh_dist,
-            goal_id, max_height):
+            goal_id, max_height)
     elif reward_type == RewardType.PATH_REWARD:
         points = reward_config[
                 RewardConfigKeys.PATH_POINTS_LIST]
