@@ -7,8 +7,6 @@ from constants import RootConfigKeys, ActionConfigKeys, \
         RewardConfigKeys, RewardConstants, ActionConstants
 from dqn_log import configure_logging
 
-from argparse import ArgumentParser
-
 import numpy as np
 from cntk.core import Value
 from cntk.initializer import he_uniform
@@ -22,6 +20,10 @@ from cntk.train import Trainer
 
 import csv
 import json
+import logging
+import os
+import sys
+import argparse
 
 
 def transform_input(responses):
@@ -74,7 +76,7 @@ class DeepQAgent(object):
                  gamma=0.99, explorer=LinearEpsilonAnnealingExplorer(1, 0.1, 1000000),
                  learning_rate=0.00025, momentum=0.95, minibatch_size=32,
                  memory_size=500000, train_after=10000, train_interval=4, target_update_interval=10000,
-                 monitor=True):
+                 monitor=True, traindir_path="traindir"):
         self.input_shape = input_shape
         self.nb_actions = nb_actions
         self.gamma = gamma
@@ -88,6 +90,7 @@ class DeepQAgent(object):
         self._history = History(input_shape)
         self._memory = ReplayMemory(memory_size, input_shape[1:], 4)
         self._num_actions_taken = 0
+        self._traindir_path=traindir_path
 
         # Metrics accumulator
         self._episode_rewards, self._episode_q_means, self._episode_q_stddev = [], [], []
@@ -138,7 +141,11 @@ class DeepQAgent(object):
         l_sgd = adam(self._action_value_net.parameters, lr_schedule,
                      momentum=m_schedule, variance_momentum=vm_schedule)
 
-        self._metrics_writer = TensorBoardProgressWriter(freq=1, log_dir='metrics', model=criterion) if monitor else None
+        metrics_path = os.path.join(self._traindir_path, 'metrics')
+        if not os.path.exists(metrics_path):
+            os.makedirs(metrics_path)
+        self._metrics_writer = TensorBoardProgressWriter(freq=1,
+                log_dir=metrics_path, model=criterion) if monitor else None
         self._learner = l_sgd
         self._trainer = Trainer(criterion, (criterion, None), l_sgd, self._metrics_writer)
 
@@ -166,10 +173,13 @@ class DeepQAgent(object):
             )
 
             self._episode_q_means.append(np.mean(q_values))
+            logger.info("Episode q_means: {}".format(self._episode_q_means[-1]))
             self._episode_q_stddev.append(np.std(q_values))
+            logger.info("Episode q_stddev: {}".format(self._episode_q_stddev[-1]))
 
             # Return the value maximizing the expected reward
             action = q_values.argmax()
+            logger.debug("Selected action: {}".format(action))
 
         # Keep track of interval action counter
         self._num_actions_taken += 1
@@ -185,12 +195,18 @@ class DeepQAgent(object):
             done (bool): Indicate if the action has terminated the environment
         """
         self._episode_rewards.append(reward)
+        logger.info("Episode reward: {}".format(self._episode_rewards[-1]))
 
         # If done, reset short term memory (ie. History)
         if done:
             # Plot the metrics through Tensorboard and reset buffers
             if self._metrics_writer is not None:
                 self._plot_metrics()
+            logger.info("Episode is finishing.")
+            if len(self._episode_rewards) > 0:
+                logger.info("mean_reward={} mean_q_mean={} mean_q_stdev={}".format(
+                    np.mean(self._episode_rewards), np.mean(self._episode_q_means), np.mean(self._episode_q_stddev)))
+            logger.debug("Cleaning short-term memory")
             self._episode_rewards, self._episode_q_means, self._episode_q_stddev = [], [], []
 
             # Reset the short term memory
@@ -198,6 +214,7 @@ class DeepQAgent(object):
 
         # Append to long term memory
         self._memory.append(old_state, action, reward, done)
+        logging.debug("Appending data to long memory")
 
     def train(self):
         """ This allows the agent to train itself to better understand the environment dynamics.
@@ -216,6 +233,7 @@ class DeepQAgent(object):
             if (agent_step % self._train_interval) == 0:
                 pre_states, actions, post_states, rewards, terminals = self._memory.minibatch(self._minibatch_size)
 
+                logger.debug("Started train iteration.")
                 self._trainer.train_minibatch(
                     self._trainer.loss_function.argument_map(
                         pre_states=pre_states,
@@ -225,16 +243,22 @@ class DeepQAgent(object):
                         terminals=terminals
                     )
                 )
+                logger.debug("Finished train iteration.")
 
                 # Update the Target Network if needed
                 if (agent_step % self._target_update_interval) == 0:
+                    logger.debug("Updating target network and saving current checkpoint.")
                     self._target_net = self._action_value_net.clone(CloneMethod.freeze)
-                    filename = "models\model%d" % agent_step
+                    path_to_models = os.path.join(self._traindir_path, "models")
+                    if not os.path.exists(path_to_models):
+                        os.makedirs(path_to_models)
+                    filename = os.path.join(path_to_models, "model%d" % agent_step)
                     self._trainer.save_checkpoint(filename)
 
     def _plot_metrics(self):
         """Plot current buffers accumulated values to visualize agent learning
         """
+        logger.debug("Plot metrics called.")
         if len(self._episode_q_means) > 0:
             mean_q = np.asscalar(np.mean(self._episode_q_means))
             self._metrics_writer.write_value('Mean Q per ep.', mean_q, self._num_actions_taken)

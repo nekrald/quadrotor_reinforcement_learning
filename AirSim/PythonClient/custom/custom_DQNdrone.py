@@ -82,7 +82,7 @@ def main(config, args):
     agent = DeepQAgent((NumBufferFrames, SizeRows, SizeCols),
         NumActions, monitor=True, train_after=train_after,
         memory_size=memory_size, train_interval=train_interval,
-        target_update_interval=update_interval)
+        target_update_interval=update_interval, traindir_path=args.traindir)
     move_duration = config[RootConfigKeys.MOVE_DURATION]
 
     while current_step < max_steps:
@@ -171,5 +171,6 @@ if __name__ == "__main__":
     shutil.copy(args.config, os.path.join(os.path.realpath(args.traindir), "config.json"))
     with open(args.config, "r") as fconf:
         config = json.load(fconf)
+    configure_logging()
     main(config, args)
 
