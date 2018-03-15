@@ -91,7 +91,7 @@ class PathReward(object):
         for item in points:
             self.points.append(np.array(item))
         self.thresh_dist = thresh_dist
-        sefl.beta = beta
+        self.beta = beta
         self.collision_penalty = collision_penalty
         self.large_dist_penalty = large_dist_penalty
         self.client = client
@@ -99,7 +99,7 @@ class PathReward(object):
     def isDone(self, reward):
         done = 0
         if reward <= self.collision_penalty \
-                or reward <= self.large_dist_penalty:
+                or reward <= 3 * self.large_dist_penalty:
             done = 1
         return done
 

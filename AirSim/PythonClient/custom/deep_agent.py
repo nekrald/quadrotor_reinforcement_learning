@@ -176,13 +176,13 @@ class DeepQAgent(object):
             )
 
             self._episode_q_means.append(np.mean(q_values))
-            logger.info("Episode q_means: {}".format(self._episode_q_means[-1]))
+            logging.info("Episode q_means: {}".format(self._episode_q_means[-1]))
             self._episode_q_stddev.append(np.std(q_values))
-            logger.info("Episode q_stddev: {}".format(self._episode_q_stddev[-1]))
+            logging.info("Episode q_stddev: {}".format(self._episode_q_stddev[-1]))
 
             # Return the value maximizing the expected reward
             action = q_values.argmax()
-            logger.debug("Selected action: {}".format(action))
+            logging.debug("Selected action: {}".format(action))
 
         # Keep track of interval action counter
         self._num_actions_taken += 1
@@ -198,18 +198,18 @@ class DeepQAgent(object):
             done (bool): Indicate if the action has terminated the environment
         """
         self._episode_rewards.append(reward)
-        logger.info("Episode reward: {}".format(self._episode_rewards[-1]))
+        logging.info("Episode reward: {}".format(self._episode_rewards[-1]))
 
         # If done, reset short term memory (ie. History)
         if done:
             # Plot the metrics through Tensorboard and reset buffers
             if self._metrics_writer is not None:
                 self._plot_metrics()
-            logger.info("Episode is finishing.")
-            if len(self._episode_rewards) > 0:
-                logger.info("mean_reward={} mean_q_mean={} mean_q_stdev={}".format(
+            logging.info("Episode is finishing.")
+            if len(self._episode_rewards) > 0 and len(self._episode_q_means) > 0 and len(self._episode_q_stddev) > 0:
+                logging.info("mean_reward={} mean_q_mean={} mean_q_stdev={}".format(
                     np.mean(self._episode_rewards), np.mean(self._episode_q_means), np.mean(self._episode_q_stddev)))
-            logger.debug("Cleaning short-term memory")
+            logging.debug("Cleaning short-term memory")
             self._episode_rewards, self._episode_q_means, self._episode_q_stddev = [], [], []
 
             # Reset the short term memory
@@ -236,7 +236,7 @@ class DeepQAgent(object):
             if (agent_step % self._train_interval) == 0:
                 pre_states, actions, post_states, rewards, terminals = self._memory.minibatch(self._minibatch_size)
 
-                logger.debug("Started train iteration.")
+                logging.debug("Started train iteration.")
                 self._trainer.train_minibatch(
                     self._trainer.loss_function.argument_map(
                         pre_states=pre_states,
@@ -246,11 +246,11 @@ class DeepQAgent(object):
                         terminals=terminals
                     )
                 )
-                logger.debug("Finished train iteration.")
+                logging.debug("Finished train iteration.")
 
                 # Update the Target Network if needed
                 if (agent_step % self._target_update_interval) == 0:
-                    logger.debug("Updating target network and saving current checkpoint.")
+                    logging.debug("Updating target network and saving current checkpoint.")
                     self._target_net = self._action_value_net.clone(CloneMethod.freeze)
                     path_to_models = os.path.join(self._traindir_path, "models")
                     if not os.path.exists(path_to_models):
@@ -261,7 +261,7 @@ class DeepQAgent(object):
     def _plot_metrics(self):
         """Plot current buffers accumulated values to visualize agent learning
         """
-        logger.debug("Plot metrics called.")
+        logging.debug("Plot metrics called.")
         if len(self._episode_q_means) > 0:
             mean_q = np.asscalar(np.mean(self._episode_q_means))
             self._metrics_writer.write_value('Mean Q per ep.', mean_q, self._num_actions_taken)

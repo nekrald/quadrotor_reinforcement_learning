@@ -53,11 +53,11 @@ class GridActionSpace(object):
 
 def make_action(config):
     action_config = config[RootConfigKeys.ACTION_CONFIG]
-    scale_factor = config[ActionConfigKeys.SCALING_FACTOR]
+    scale_factor = action_config[ActionConfigKeys.SCALING_FACTOR]
     if action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.DEFAULT_SPACE:
         action = DefaultActionSpace(scale_factor)
     elif action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.GRID_SPACE:
-        action = GridActionSpace(scale_factor, config[ActionConfigKeys.GRID_SIZE])
+        action = GridActionSpace(scale_factor, action_config[ActionConfigKeys.GRID_SIZE])
     else:
         raise ValueError("Unexpected ActionSpaceType.")
     return action

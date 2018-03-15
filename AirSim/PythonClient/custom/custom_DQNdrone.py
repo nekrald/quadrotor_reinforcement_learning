@@ -38,17 +38,19 @@ def main(config, args):
     initY = config[RootConfigKeys.INIT_Y]
     initZ = config[RootConfigKeys.INIT_Z]
 
+    # Connect to the AirSim simulator.
+    client = MultirotorClient()
+    client.confirmConnection()
+    client.enableApiControl(True)
+    client.armDisarm(True)
+
     initial_position = client.getPosition()
     if config[RootConfigKeys.USE_FLAG_POS]:
         initX = initial_position.x_val
         initY = initial_position.y_val
         initZ = initial_position.z_val
 
-    # Connect to the AirSim simulator.
-    client = MultirotorClient()
-    client.confirmConnection()
-    client.enableApiControl(True)
-    client.armDisarm(True)
+
 
     client.goHome()
     client.takeoff()
