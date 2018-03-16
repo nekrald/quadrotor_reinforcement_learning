@@ -1,8 +1,11 @@
 import logging
+
+import math
 import numpy as np
 
 from enum import Enum
-from constants import RewardConfigKeys, RootConfigKeys
+from AirSimClient import AirSimImageType, ImageRequest
+from custom.constants import RootConfigKeys, RewardConfigKeys
 
 
 class RewardType(object):
@@ -38,9 +41,9 @@ class ExplorationReward(object):
         else:
             client = self.client
             INF = 1e100
-            min_depth_perspective = -INF
-            min_depth_vis = -INF
-            min_depth_planner = -INF
+            min_depth_perspective = INF
+            min_depth_vis = INF
+            min_depth_planner = INF
             for camera_id in self.used_cams:
                 requests = [
                     ImageRequest(camera_id, query, True, False)
@@ -50,7 +53,7 @@ class ExplorationReward(object):
                         AirSimImageType.DepthPlanner,
                     ]]
                 responses = client.simGetImages(requests)
-                min_depth_planner = min(min_depth_planner,
+                min_depth_perspective = min(min_depth_perspective,
                     np.min(np.array(responses[0].image_data_float)))
                 min_depth_vis = min(min_depth_vis,
                     np.min(np.array(responses[1].image_data_float)))

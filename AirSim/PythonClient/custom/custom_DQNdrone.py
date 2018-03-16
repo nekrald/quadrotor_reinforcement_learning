@@ -19,17 +19,17 @@ del upper_dir
 
 from AirSimClient import *
 
-from action_space import DefaultActionSpace, \
+from custom.action_space import DefaultActionSpace, \
     GridActionSpace, make_action, ActionSpaceType
-from reward import PathReward, make_reward, RewardType
-from replay_memory import ReplayMemory
-from history import History
-from deep_agent import DeepQAgent, huber_loss, transform_input
-from exploration import LinearEpsilonAnnealingExplorer
-from constants import RootConfigKeys, ActionConfigKeys, \
+from custom.reward import PathReward, make_reward, RewardType
+from custom.replay_memory import ReplayMemory
+from custom.history import History
+from custom.deep_agent import DeepQAgent, huber_loss, transform_input
+from custom.exploration import LinearEpsilonAnnealingExplorer
+from custom.constants import RootConfigKeys, ActionConfigKeys, \
         RewardConfigKeys, RewardConstants, ActionConstants
-from dqn_log import configure_logging
-from config import make_default_root_config,\
+from custom.dqn_log import configure_logging
+from custom.config import make_default_root_config,\
         make_default_action_config, make_default_reward_config
 
 

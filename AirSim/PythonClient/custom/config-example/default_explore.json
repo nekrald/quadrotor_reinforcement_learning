@@ -18,7 +18,7 @@
     },
     "reward_config": {
         "collision_penalty": -1000,
-        "thresh_dist": 7,
+        "thresh_dist": 10,
         "reward_type": "exploration",
         "used_cams": [
             3

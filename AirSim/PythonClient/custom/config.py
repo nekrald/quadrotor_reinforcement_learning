@@ -1,9 +1,9 @@
 import json
 
-from action_space import DefaultActionSpace, \
+from custom.action_space import DefaultActionSpace, \
     GridActionSpace, ActionSpaceType, make_action
-from reward import PathReward, RewardType, make_reward
-from constants import RootConfigKeys, ActionConfigKeys, \
+from custom.reward import PathReward, RewardType, make_reward
+from custom.constants import RootConfigKeys, ActionConfigKeys, \
         RewardConfigKeys, RewardConstants, ActionConstants
 
 
