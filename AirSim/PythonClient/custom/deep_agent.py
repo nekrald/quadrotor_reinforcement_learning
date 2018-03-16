@@ -1,11 +1,9 @@
-from action_space import DefaultActionSpace, GridActionSpace
-from reward import PathReward
-from replay_memory import ReplayMemory
-from history import History
-from exploration import LinearEpsilonAnnealingExplorer
-from constants import RootConfigKeys, ActionConfigKeys, \
+from custom.replay_memory import ReplayMemory
+from custom.history import History
+from custom.exploration import LinearEpsilonAnnealingExplorer
+from custom.constants import RootConfigKeys, ActionConfigKeys, \
         RewardConfigKeys, RewardConstants, ActionConstants
-from dqn_log import configure_logging
+from custom.dqn_log import configure_logging
 
 import numpy as np
 from cntk.core import Value

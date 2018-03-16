@@ -1,5 +1,6 @@
 from enum import Enum
-from constants import ActionConfigKeys, RootConfigKeys
+
+from custom.constants import RootConfigKeys, ActionConfigKeys
 
 
 class ActionSpaceType(object):
@@ -37,15 +38,15 @@ class DefaultActionSpace(object):
 class GridActionSpace(object):
 
     def __init__(self, scaling_factor=0.25, grid_size=0):
-        self.grid_size  = grid_size
+        self.grid_size = grid_size
         self.scaling_factor = scaling_factor
 
     def interpret_action(self, action):
-        assert action < grid_size * grid_size
+        assert action < self.grid_size * self.grid_size
         scaling_factor = self.scaling_factor
         dx = scaling_factor
-        dy = scaling_factor * action / grid_size
-        dz = scaling_factor * action % grid_size
+        dy = scaling_factor * action / self.grid_size
+        dz = scaling_factor * action % self.grid_size
 
     def get_num_actions(self):
         return self.grid_size * self.grid_size
