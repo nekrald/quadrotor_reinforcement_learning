@@ -49,14 +49,9 @@ def main(config, args):
         initX = initial_position.x_val
         initY = initial_position.y_val
         initZ = initial_position.z_val
-
-    logging.info("Next calling goHome()")
-    client.goHome()
-    logging.info("goHome() returned")
-
-    logging.info("Next calling takeoff()")
-    client.takeoff()
-    logging.info("takeoff() returned")
+    else:
+        logging.info("Ignoring flag. Using coordinates (X, Y, Z):{}, Rotation:{}".format((initX, initY, initZ), (0, 0, 0)))
+        client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
 
     # Train
     epoch = config[RootConfigKeys.EPOCH_COUNT]
@@ -96,9 +91,9 @@ def main(config, args):
         quad_offset = action_processor.interpret_action(action)
         quad_vel = client.getVelocity()
         client.moveByVelocity(
-            quad_vel.x_val+quad_offset[0],
-            quad_vel.y_val+quad_offset[1],
-            quad_vel.z_val+quad_offset[2], move_duration)
+            quad_offset[0],
+            quad_offset[1],
+            quad_offset[2], move_duration)
         time.sleep(config[RootConfigKeys.SLEEP_TIME])
 
         quad_state = client.getPosition()
@@ -115,12 +110,12 @@ def main(config, args):
         agent.train()
 
         if done:
-            client.reset()
+            if config[RootConfigKeys.USE_FLAG_POS]:
+                client.reset()
+            else:
+                client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
             client.enableApiControl(True)
             client.armDisarm(True)
-            logging.info("Next calling takeoff()")
-            client.takeoff()
-            logging.info("takeoff() returned")
             time.sleep(config[RootConfigKeys.SLEEP_TIME])
         current_step += 1
 

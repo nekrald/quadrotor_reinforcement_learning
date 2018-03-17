@@ -48,9 +48,9 @@ class ExplorationReward(object):
                 requests = [
                     ImageRequest(camera_id, query, True, False)
                     for query in [
+                        AirSimImageType.Scene,
                         AirSimImageType.DepthPerspective,
                         AirSimImageType.DepthVis,
-                        AirSimImageType.DepthPlanner,
                     ]]
                 responses = client.simGetImages(requests)
                 min_depth_perspective = min(min_depth_perspective,
