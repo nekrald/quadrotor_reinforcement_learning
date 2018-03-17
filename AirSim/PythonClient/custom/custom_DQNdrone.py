@@ -58,12 +58,6 @@ def main(config, args):
     client.takeoff()
     logging.info("takeoff() returned")
 
-    logging.info("Next calling moveToPosition")
-    client.moveToPosition(initX, initY, initZ, 5)
-    logging.info("moveToPosition returned")
-
-    time.sleep(config[RootConfigKeys.SLEEP_TIME])
-
     # Train
     epoch = config[RootConfigKeys.EPOCH_COUNT]
     max_steps = epoch * config[RootConfigKeys.MAX_STEPS_MUL]
@@ -121,17 +115,14 @@ def main(config, args):
         agent.train()
 
         if done:
-            logging.info("Next calling goHome()")
-            client.goHome()
-            logging.info("goHome() returned")
+            client.reset()
+            client.enableApiControl(True)
+            client.armDisarm(True)
             logging.info("Next calling takeoff()")
             client.takeoff()
             logging.info("takeoff() returned")
-            logging.info("Next calling moveToPosition")
-            client.moveToPosition(initX, initY, initZ, 5)
-            logging.info("moveToPosition returned")
             time.sleep(config[RootConfigKeys.SLEEP_TIME])
-        current_step +=1
+        current_step += 1
 
         responses = client.simGetImages([ImageRequest(3,
             AirSimImageType.DepthPerspective, True, False)])
