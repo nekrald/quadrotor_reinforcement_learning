@@ -7,6 +7,7 @@ import json
 import copy
 import shutil
 import argparse
+import time
 
 import numpy as np
 
@@ -50,17 +51,10 @@ def main(config, args):
         initY = initial_position.y_val
         initZ = initial_position.z_val
 
-    logging.info("Next calling goHome()")
-    client.goHome()
-    logging.info("goHome() returned")
+    client.reset()
+    client.enableApiControl(True)
+    client.armDisarm(True)
 
-    logging.info("Next calling takeoff()")
-    client.takeoff()
-    logging.info("takeoff() returned")
-
-    logging.info("Next calling moveToPosition")
-    client.moveToPosition(initX, initY, initZ, 5)
-    logging.info("moveToPosition returned")
 
     time.sleep(config[RootConfigKeys.SLEEP_TIME])
 
@@ -100,11 +94,10 @@ def main(config, args):
 
         action = agent.act(current_state)
         quad_offset = action_processor.interpret_action(action)
-        quad_vel = client.getVelocity()
         client.moveByVelocity(
-            quad_vel.x_val+quad_offset[0],
-            quad_vel.y_val+quad_offset[1],
-            quad_vel.z_val+quad_offset[2], move_duration)
+            quad_offset[0],
+            quad_offset[1],
+            quad_offset[2], move_duration, DrivetrainType.ForwardOnly)
         time.sleep(config[RootConfigKeys.SLEEP_TIME])
 
         quad_state = client.getPosition()
@@ -121,15 +114,9 @@ def main(config, args):
         agent.train()
 
         if done:
-            logging.info("Next calling goHome()")
-            client.goHome()
-            logging.info("goHome() returned")
-            logging.info("Next calling takeoff()")
-            client.takeoff()
-            logging.info("takeoff() returned")
-            logging.info("Next calling moveToPosition")
-            client.moveToPosition(initX, initY, initZ, 5)
-            logging.info("moveToPosition returned")
+            client.reset()
+            client.enableApiControl(True)
+            client.armDisarm(True)
             time.sleep(config[RootConfigKeys.SLEEP_TIME])
         current_step +=1
 

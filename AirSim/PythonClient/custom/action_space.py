@@ -6,6 +6,7 @@ from custom.constants import RootConfigKeys, ActionConfigKeys
 class ActionSpaceType(object):
     DEFAULT_SPACE = 'default'
     GRID_SPACE = 'grid'
+    FLAT_SPACE = 'flat'
 
 
 class DefaultActionSpace(object):
@@ -29,6 +30,28 @@ class DefaultActionSpace(object):
             quad_offset = (0, -scaling_factor, 0)
         elif action == 6:
             quad_offset = (0, 0, -scaling_factor)
+        return quad_offset
+
+    def get_num_actions(self):
+        return self.num_actions
+
+class FlatActionSpace(object):
+    def __init__(self, scaling_factor=0.25):
+        self.scaling_factor = scaling_factor
+        self.num_actions = 5
+
+    def interpret_action(self, action):
+        scaling_factor = self.scaling_factor
+        if action == 0:
+            quad_offset = (0, 0, 0)
+        elif action == 1:
+            quad_offset = (scaling_factor, 0, 0)
+        elif action == 2:
+            quad_offset = (0, scaling_factor, 0)
+        elif action == 3:
+            quad_offset = (-scaling_factor, 0, 0)
+        elif action == 4:
+            quad_offset = (0, -scaling_factor, 0)
         return quad_offset
 
     def get_num_actions(self):
@@ -59,6 +82,8 @@ def make_action(config):
         action = DefaultActionSpace(scale_factor)
     elif action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.GRID_SPACE:
         action = GridActionSpace(scale_factor, action_config[ActionConfigKeys.GRID_SIZE])
+    elif action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.FLAT_SPACE:
+        action = FlatActionSpace(scale_factor)
     else:
         raise ValueError("Unexpected ActionSpaceType.")
     return action
