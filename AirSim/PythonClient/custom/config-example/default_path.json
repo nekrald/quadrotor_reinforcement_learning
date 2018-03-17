@@ -4,7 +4,7 @@
     "initX": -0.55265,
     "initY": -31.9786,
     "initZ": -19.0225,
-    "move_duration": 4,
+    "move_duration": 8,
     "use_flag_position": true,
     "epoch_number": 100,
     "max_steps_mul": 10000,
@@ -13,7 +13,7 @@
     "train_interval": 4,
     "action_config": {
         "action_space_type": "default",
-        "scaling_factor": 0.25,
+        "scaling_factor": 1.5,
         "grid_size": 4
     },
     "reward_config": {

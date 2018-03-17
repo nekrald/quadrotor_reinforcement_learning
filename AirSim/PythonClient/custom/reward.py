@@ -25,7 +25,7 @@ class ExplorationReward(object):
         self.vehicle_rad = vehicle_rad
         self.tau_d = thresh_dist
         self.goal_id = goal_id
-        self.max_height = max_height
+        self.max_height = -max_height
         self.height_penalty = height_penalty
 
     def isDone(self, reward):
@@ -37,8 +37,8 @@ class ExplorationReward(object):
     def compute_reward(self, quad_state, quad_vel, collision_info):
         if collision_info.has_collided:
             reward = self.collision_penalty
-        elif quad_state.z_val > self.max_height:
-            reward = self.height_penalty
+        elif quad_state.z_val < self.max_height:
+            reward = quad_state.z_val * self.height_penalty
         else:
             client = self.client
             INF = 1e100
@@ -49,9 +49,9 @@ class ExplorationReward(object):
                 requests = [
                     ImageRequest(camera_id, query, True, False)
                     for query in [
+                        AirSimImageType.Scene,
                         AirSimImageType.DepthPerspective,
                         AirSimImageType.DepthVis,
-                        AirSimImageType.DepthPlanner,
                     ]]
                 responses = client.simGetImages(requests)
                 min_depth_perspective = min(min_depth_perspective,

@@ -70,6 +70,7 @@ class GridActionSpace(object):
         dx = scaling_factor
         dy = scaling_factor * action / self.grid_size
         dz = scaling_factor * action % self.grid_size
+        return dx, dy, dz
 
     def get_num_actions(self):
         return self.grid_size * self.grid_size

@@ -50,14 +50,12 @@ def main(config, args):
         initX = initial_position.x_val
         initY = initial_position.y_val
         initZ = initial_position.z_val
-
+    else:
+        logging.info("Ignoring flag. Using coordinates (X, Y, Z):{}, Rotation:{}".format((initX, initY, initZ), (0, 0, 0)))
+        client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
     client.reset()
     client.enableApiControl(True)
     client.armDisarm(True)
-
-
-    time.sleep(config[RootConfigKeys.SLEEP_TIME])
-
     # Train
     epoch = config[RootConfigKeys.EPOCH_COUNT]
     max_steps = epoch * config[RootConfigKeys.MAX_STEPS_MUL]
@@ -114,11 +112,14 @@ def main(config, args):
         agent.train()
 
         if done:
-            client.reset()
+            if config[RootConfigKeys.USE_FLAG_POS]:
+                client.reset()
+            else:
+                client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
             client.enableApiControl(True)
             client.armDisarm(True)
             time.sleep(config[RootConfigKeys.SLEEP_TIME])
-        current_step +=1
+        current_step += 1
 
         responses = client.simGetImages([ImageRequest(3,
             AirSimImageType.DepthPerspective, True, False)])
