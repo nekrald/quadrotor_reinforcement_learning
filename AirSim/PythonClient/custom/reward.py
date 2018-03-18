@@ -53,23 +53,43 @@ class ExplorationReward(object):
                         AirSimImageType.DepthPlanner,
                     ]]
                 responses = client.simGetImages(requests)
-                min_depth_perspective = min(min_depth_perspective,
-                    np.min(np.array(responses[0].image_data_float)))
-                min_depth_vis = min(min_depth_vis,
-                    np.min(np.array(responses[1].image_data_float)))
-                min_depth_planner = min(min_depth_planner,
-                    np.min(np.array(responses[2].image_data_float)))
-            goals = [min_depth_perspective, min_depth_vis,
-                        min_depth_planner]
-            logging.debug(
+
+                depth_perspective_array = np.array(responses[0].image_data_float)
+                depth_vis_array = np.array(responses[1].image_data_float)
+                depth_planner_array = np.array(responses[2].image_data_float)
+
+
+                arrays = [depth_perspective_array,
+                          depth_vis_array,
+                          depth_planner_array]
+                results = []
+
+                for idx, item in enumerate(arrays):
+                    shape = int(item.shape[0] ** 0.5)
+                    item = item.reshape((shape, shape))
+                    arrays[idx] = item
+                    min_x = int(shape / 2. - 45.)
+                    max_x = int(shape /2. + 45.)
+                    min_x = max(min_x, 0)
+                    max_x = min(max_x, shape)
+                    slice = item[min_x : max_x, :]
+                    results.append(np.min(slice))
+
+                min_depth_perspective = min(results[0], min_depth_perspective)
+                min_depth_vis = min(min_depth_vis, results[1])
+                min_depth_planner = min(min_depth_planner, results[2])
+            goals = np.array([min_depth_perspective, min_depth_vis,
+                        min_depth_planner])
+            logging.info(
                 "ExplorationReward: these are the goals = {}".format(
                     goals))
             dist = goals[self.goal_id]
-            reward = (dist - self.vehicle_rad) / (
-                    self.tau_d - self.vehicle_rad)
+            logging.info("Dist = {}".format(dist))
+            reward = (dist * 110 - 1.5 * self.vehicle_rad) / (
+                     self.tau_d - self.vehicle_rad)
             logging.debug("ExplorationReward: before truncating" + \
                     " we have = {}".format(reward))
-            reward = min(reward, 1)
+            reward = min(reward, 19)
             logging.debug("ExplorationReward: after truncation" + \
                     " we obtained {}".format(reward))
         return reward

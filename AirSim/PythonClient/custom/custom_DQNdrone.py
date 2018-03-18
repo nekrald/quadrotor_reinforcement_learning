@@ -2,13 +2,9 @@
 import sys
 import os
 import logging
-import csv
 import json
-import copy
 import shutil
 import argparse
-
-import numpy as np
 
 
 file_dir = os.path.dirname(__file__)
@@ -22,10 +18,7 @@ from AirSimClient import *
 from custom.action_space import DefaultActionSpace, \
     GridActionSpace, make_action, ActionSpaceType
 from custom.reward import PathReward, make_reward, RewardType
-from custom.replay_memory import ReplayMemory
-from custom.history import History
 from custom.deep_agent import DeepQAgent, huber_loss, transform_input
-from custom.exploration import LinearEpsilonAnnealingExplorer
 from custom.constants import RootConfigKeys, ActionConfigKeys, \
         RewardConfigKeys, RewardConstants, ActionConstants
 from custom.dqn_log import configure_logging
@@ -49,20 +42,9 @@ def main(config, args):
         initX = initial_position.x_val
         initY = initial_position.y_val
         initZ = initial_position.z_val
-
-    logging.info("Next calling goHome()")
-    client.goHome()
-    logging.info("goHome() returned")
-
-    logging.info("Next calling takeoff()")
-    client.takeoff()
-    logging.info("takeoff() returned")
-
-    logging.info("Next calling moveToPosition")
-    client.moveToPosition(initX, initY, initZ, 5)
-    logging.info("moveToPosition returned")
-
-    time.sleep(config[RootConfigKeys.SLEEP_TIME])
+    else:
+        logging.info("Ignoring flag. Using coordinates (X, Y, Z):{}, Rotation:{}".format((initX, initY, initZ), (0, 0, 0)))
+        client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
 
     # Train
     epoch = config[RootConfigKeys.EPOCH_COUNT]
@@ -99,12 +81,16 @@ def main(config, args):
         logging.info("Processing current_step={}".format(current_step))
 
         action = agent.act(current_state)
+        logging.info("Selected action = {}!".format(action))
         quad_offset = action_processor.interpret_action(action)
-        quad_vel = client.getVelocity()
-        client.moveByVelocity(
-            quad_vel.x_val+quad_offset[0],
-            quad_vel.y_val+quad_offset[1],
-            quad_vel.z_val+quad_offset[2], move_duration)
+
+        assert(not args.forward_only)
+        if args.forward_only:
+            client.moveByVelocity(quad_offset[0], quad_offset[1],
+                quad_offset[2], move_duration, DrivetrainType.ForwardOnly)
+        else:
+            client.moveByVelocity(quad_offset[0], quad_offset[1],
+                quad_offset[2], move_duration, DrivetrainType.MaxDegreeOfFreedom)
         time.sleep(config[RootConfigKeys.SLEEP_TIME])
 
         quad_state = client.getPosition()
@@ -121,17 +107,13 @@ def main(config, args):
         agent.train()
 
         if done:
-            logging.info("Next calling goHome()")
-            client.goHome()
-            logging.info("goHome() returned")
-            logging.info("Next calling takeoff()")
-            client.takeoff()
-            logging.info("takeoff() returned")
-            logging.info("Next calling moveToPosition")
-            client.moveToPosition(initX, initY, initZ, 5)
-            logging.info("moveToPosition returned")
-            time.sleep(config[RootConfigKeys.SLEEP_TIME])
-        current_step +=1
+            if config[RootConfigKeys.USE_FLAG_POS]:
+                client.reset()
+            else:
+                client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
+            client.enableApiControl(True)
+            client.armDisarm(True)
+        current_step += 1
 
         responses = client.simGetImages([ImageRequest(3,
             AirSimImageType.DepthPerspective, True, False)])
@@ -175,13 +157,16 @@ def init_and_dump_configs():
         with open("config-example/" + name + ".json", "w") as f:
             json.dump(config, f, indent=4)
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='DQNdrone for AirSim')
     parser.add_argument('config', metavar='CONFIG', type=str, help='path-to-file-with-config')
     parser.add_argument('--traindir', default='traindir', type=str, metavar='DIR', help='path-to-traindir')
     parser.add_argument('--checkpoint', default=None, type=str, metavar='DNN', help='path-to-checkpoint')
+    parser.add_argument('--forward-only', action='store_true')
     args = parser.parse_args()
     return args
+
 
 if __name__ == "__main__":
     args = parse_arguments()
