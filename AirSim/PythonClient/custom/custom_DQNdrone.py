@@ -5,6 +5,7 @@ import logging
 import json
 import shutil
 import argparse
+import time
 
 
 file_dir = os.path.dirname(__file__)
@@ -34,8 +35,10 @@ def main(config, args):
     # Connect to the AirSim simulator.
     client = MultirotorClient()
     client.confirmConnection()
+    client.reset()
     client.enableApiControl(True)
     client.armDisarm(True)
+    client.takeoff()
 
     initial_position = client.getPosition()
     if config[RootConfigKeys.USE_FLAG_POS]:
@@ -45,6 +48,7 @@ def main(config, args):
     else:
         logging.info("Ignoring flag. Using coordinates (X, Y, Z):{}, Rotation:{}".format((initX, initY, initZ), (0, 0, 0)))
         client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
+
 
     # Train
     epoch = config[RootConfigKeys.EPOCH_COUNT]
@@ -83,9 +87,11 @@ def main(config, args):
         action = agent.act(current_state)
         logging.info("Selected action = {}!".format(action))
         quad_offset = action_processor.interpret_action(action)
+        print("offset = ", quad_offset)
+        print("duration = ", move_duration)
 
-        assert(not args.forward_only)
         if args.forward_only:
+            print("In forward only.")
             client.moveByVelocity(quad_offset[0], quad_offset[1],
                 quad_offset[2], move_duration, DrivetrainType.ForwardOnly)
         else:
@@ -94,7 +100,9 @@ def main(config, args):
         time.sleep(config[RootConfigKeys.SLEEP_TIME])
 
         quad_state = client.getPosition()
+        logging.info("Current quad position: {}".format(quad_state))
         quad_vel = client.getVelocity()
+
         collision_info = client.getCollisionInfo()
 
         reward = reward_processor.compute_reward(
@@ -107,12 +115,13 @@ def main(config, args):
         agent.train()
 
         if done:
-            if config[RootConfigKeys.USE_FLAG_POS]:
-                client.reset()
-            else:
-                client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
+            logging.info("Done requested.")
+            client.reset()
             client.enableApiControl(True)
             client.armDisarm(True)
+            client.takeoff()
+            if not config[RootConfigKeys.USE_FLAG_POS]:
+                client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
         current_step += 1
 
         responses = client.simGetImages([ImageRequest(3,

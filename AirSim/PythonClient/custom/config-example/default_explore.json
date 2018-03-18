@@ -1,10 +1,10 @@
 {
     "train_after": 1000,
-    "sleep_time": 0.8,
+    "sleep_time": 0.9,
     "initX": -0.55265,
     "initY": -31.9786,
     "initZ": -19.0225,
-    "move_duration": 0.6,
+    "move_duration": 2.0,
     "use_flag_position": true,
     "epoch_number": 100,
     "max_steps_mul": 10000,
@@ -13,7 +13,7 @@
     "train_interval": 4,
     "action_config": {
         "action_space_type": "default",
-        "scaling_factor": 0.0625
+        "scaling_factor": 2
     },
     "reward_config": {
         "collision_penalty": -5000,
@@ -23,8 +23,8 @@
             0,3,4
         ],
         "vehicle_radius": 10,
-        "goal_id": 0,
-        "max_height": 40,
+        "goal_id": 2,
+        "max_height": 14,
         "height_penalty": 5
     }
 }

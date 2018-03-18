@@ -11,6 +11,7 @@ from custom.constants import RootConfigKeys, RewardConfigKeys
 class RewardType(object):
     EXPLORATION_REWARD = "exploration"
     PATH_REWARD = "path"
+    LANDSCAPE_REWARD = "LANDSCAPE_REWARD"
 
 
 class ExplorationReward(object):
@@ -24,7 +25,7 @@ class ExplorationReward(object):
         self.vehicle_rad = vehicle_rad
         self.tau_d = thresh_dist
         self.goal_id = goal_id
-        self.max_height = max_height
+        self.max_height = -max_height
         self.height_penalty = height_penalty
 
     def isDone(self, reward):
@@ -35,10 +36,13 @@ class ExplorationReward(object):
 
     def compute_reward(self, quad_state, quad_vel, collision_info):
         if collision_info.has_collided:
+            logging.info("Submitting collision penalty.")
             reward = self.collision_penalty
-        elif quad_state.z_val > self.max_height:
-            reward = self.height_penalty
+        elif quad_state.z_val < self.max_height:
+            logging.info("Height reward submisson.")
+            reward = quad_state.z_val * self.height_penalty
         else:
+            logging.info("Reward by distance.")
             client = self.client
             INF = 1e100
             min_depth_perspective = INF
@@ -50,7 +54,7 @@ class ExplorationReward(object):
                     for query in [
                         AirSimImageType.DepthPerspective,
                         AirSimImageType.DepthVis,
-                        AirSimImageType.DepthPlanner,
+                        AirSimImageType.DepthPlanner
                     ]]
                 responses = client.simGetImages(requests)
 
@@ -68,8 +72,8 @@ class ExplorationReward(object):
                     shape = int(item.shape[0] ** 0.5)
                     item = item.reshape((shape, shape))
                     arrays[idx] = item
-                    min_x = int(shape / 2. - 45.)
-                    max_x = int(shape /2. + 45.)
+                    min_x = int(shape / 2. - 35.)
+                    max_x = int(shape /2. + 35.)
                     min_x = max(min_x, 0)
                     max_x = min(max_x, shape)
                     slice = item[min_x : max_x, :]
@@ -89,7 +93,7 @@ class ExplorationReward(object):
                      self.tau_d - self.vehicle_rad)
             logging.debug("ExplorationReward: before truncating" + \
                     " we have = {}".format(reward))
-            reward = min(reward, 19)
+            reward = min(reward, 20)
             logging.debug("ExplorationReward: after truncation" + \
                     " we obtained {}".format(reward))
         return reward
@@ -150,6 +154,38 @@ class PathReward(object):
                 reward = reward_dist + reward_speed
         return reward
 
+class LandscapeReward(object):
+
+    def __init__(self, goal_point, collision_penalty=-100, large_dist_penalty=-10, client=None):
+        self.goal_point = goal_point
+        self.collision_penalty = collision_penalty
+        self.large_dist_penalty = large_dist_penalty
+        self.client = client
+
+    def isDone(self, reward):
+        done = 0
+        if reward <= self.collision_penalty \
+                or reward <= self.large_dist_penalty:
+            done = 1
+        return done
+
+    def compute_reward(self, quad_state, quad_vel, collision_info):
+        quad_pt = np.array(list((quad_state.x_val, quad_state.y_val,
+            quad_state.z_val)))
+        if collision_info.has_collided:
+            reward = self.collision_penalty
+        else:
+            dist = np.linalg.norm(quad_pt - self.goal_point)
+            reward = 1 / (1 + dist)
+            print('Current distance: ', dist)
+
+            dist_initial = np.linalg.norm(self.goal_point)
+            reward_base = 1 / (1 + dist_initial)
+
+            if reward <= 0.1 * reward_base:
+                reward = self.large_dist_penalty
+        return reward
+
 
 def make_reward(config, client):
     reward_config = config[RootConfigKeys.REWARD_CONFIG]
@@ -186,6 +222,11 @@ def make_reward(config, client):
                 RewardConfigKeys.PATH_LARGE_DIST_PENALTY]
         reward = PathReward(points, thresh_dist, beta,
             collision_penalty, dist_penalty, client)
+    elif reward_type == RewardType.LANDSCAPE_REWARD:
+        goal_point = np.array(reward_config[RewardConfigKeys.LANDSCAPE_GOAL_POINT])
+        dist_penalty = reward_config[
+                RewardConfigKeys.PATH_LARGE_DIST_PENALTY]
+        reward = LandscapeReward(goal_point, collision_penalty, dist_penalty, client)
     else:
         raise ValueError("Unknown reward type!")
     return reward

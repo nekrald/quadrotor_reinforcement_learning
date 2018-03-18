@@ -1,10 +1,10 @@
 {
     "train_after": 1000,
-    "sleep_time": 0.1,
+    "sleep_time": 3,
     "initX": -0.55265,
     "initY": -31.9786,
     "initZ": -19.0225,
-    "move_duration": 8,
+    "move_duration": 2,
     "use_flag_position": true,
     "epoch_number": 100,
     "max_steps_mul": 10000,
@@ -12,15 +12,15 @@
     "target_update_interval": 50000,
     "train_interval": 4,
     "action_config": {
-        "action_space_type": "grid",
-        "scaling_factor": 1.5
+        "action_space_type": "flat",
+        "scaling_factor": 10,
+        "grid_size": 4
     },
     "reward_config": {
-        "collision_penalty": -1000,
-        "thresh_dist": 7,
-        "reward_type": "path",
-        "path_beta": 1.0,
-        "points_list": null,
-        "large_dist_penalty": -10
+        "collision_penalty": -1,
+        "reward_type": "landscapes_reward",
+        "goal_point": [-116.82, -134.17, 0],
+        "large_dist_penalty": -0.1,
+        "thresh_dist": 7
     }
 }

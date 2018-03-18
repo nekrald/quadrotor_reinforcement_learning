@@ -39,10 +39,13 @@ class RewardConfigKeys(object):
     PATH_BETA = "path_beta"
     PATH_LARGE_DIST_PENALTY = "large_dist_penalty"
 
+    LANDSCAPE_GOAL_POINT = "goal_point"
+
 
 class RewardConstants:
     PATH_REWARD = "path_reward"
     EXPLORE_REWARD = "expore_reward"
+    LANDSCAPE_REWARD = "landscape_reward"
 
 
 class ActionConstants:
