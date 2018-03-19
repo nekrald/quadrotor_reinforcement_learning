@@ -81,7 +81,9 @@ def main(config, args):
         checkpoint_path=args.checkpoint)
     move_duration = config[RootConfigKeys.MOVE_DURATION]
 
+    steps_now = 0
     while current_step < max_steps:
+        steps_now += 1
         logging.info("Processing current_step={}".format(current_step))
 
         action = agent.act(current_state)
@@ -114,6 +116,9 @@ def main(config, args):
         agent.observe(current_state, action, reward, done)
         agent.train()
 
+        if steps_now > args.max_flight_steps:
+            done = True
+
         if done:
             logging.info("Done requested.")
             client.reset()
@@ -122,6 +127,7 @@ def main(config, args):
             client.takeoff()
             if not config[RootConfigKeys.USE_FLAG_POS]:
                 client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
+            steps_now = 0
         current_step += 1
 
         responses = client.simGetImages([ImageRequest(3,
@@ -173,6 +179,7 @@ def parse_arguments():
     parser.add_argument('--traindir', default='traindir', type=str, metavar='DIR', help='path-to-traindir')
     parser.add_argument('--checkpoint', default=None, type=str, metavar='DNN', help='path-to-checkpoint')
     parser.add_argument('--forward-only', action='store_true')
+    parser.add_argument('--max-flight-steps', default=2500, metavar='DURATION', type=int)
     args = parser.parse_args()
     return args
 
