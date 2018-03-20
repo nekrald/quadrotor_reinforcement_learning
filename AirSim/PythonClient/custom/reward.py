@@ -166,6 +166,7 @@ class LandscapeReward(object):
         self.large_dist_penalty = large_dist_penalty
         self.large_dist_coef = large_dist_coef
         self.client = client
+        self.reward_type = RewardType.LANDSCAPE_REWARD
 
     def isDone(self, reward):
         done = 0
@@ -174,19 +175,22 @@ class LandscapeReward(object):
             done = 1
         return done
 
-    def compute_reward(self, quad_state, quad_vel, collision_info):
-        quad_pt = np.array(list((quad_state.x_val, quad_state.y_val, 0)))
+    def compute_reward(self, quad_state, quad_prev_state, collision_info):
+        state = np.array(list((quad_state.x_val, quad_state.y_val, 0)))
+        prev_state = np.array(list((quad_prev_state.x_val, quad_prev_state.y_val, 0)))
         if collision_info.has_collided:
             reward = self.collision_penalty
         else:
-            dist = np.linalg.norm(quad_pt - self.goal_point)
-            reward = 1 / (1 + dist)
+            dist = np.linalg.norm(state - self.goal_point)
+            prev_dist = np.linalg.norm(prev_state - self.goal_point)
             logging.info('Current distance: ' + str(dist))
 
             dist_initial = np.linalg.norm(self.goal_point)
-            reward_base = 1 / (1 + dist_initial)
 
-            if reward <= 0.5 * reward_base:
+            reward = (prev_dist - dist) / (prev_dist + dist)
+            reward -= np.exp(-1/abs(quad_state.z_val))
+
+            if dist_initial <= self.large_dist_coef * dist:
                 reward = self.large_dist_penalty
         return reward
 

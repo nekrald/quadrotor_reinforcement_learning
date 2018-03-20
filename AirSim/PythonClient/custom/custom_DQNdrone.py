@@ -101,10 +101,10 @@ def main(config, args):
         quad_offset = action_processor.interpret_action(action)
         print("offset = ", quad_offset)
         print("duration = ", move_duration)
-
+        quad_prev_state = client.getPosition()
         if args.forward_only:
             if len(quad_offset) == 1:
-                client.rotateByYawRate(quad_offset[0], 2 * move_duration)
+                client.rotateByYawRate(quad_offset[0], move_duration)
                 time.sleep(config[RootConfigKeys.SLEEP_TIME])
             else:
                 client.moveByVelocity(quad_offset[0], quad_offset[1],
@@ -121,8 +121,12 @@ def main(config, args):
         logging.info('Current velocity: {}, {}, {}'.format(quad_vel.x_val, quad_vel.y_val, quad_vel.z_val))
         collision_info = client.getCollisionInfo()
 
-        reward = reward_processor.compute_reward(
-                quad_state, quad_vel, collision_info)
+        if reward_processor.reward_type == RewardType.LANDSCAPE_REWARD:
+            reward = reward_processor.compute_reward(
+                quad_state, quad_prev_state, collision_info)
+        else:
+            reward = reward_processor.compute_reward(
+                    quad_state, quad_vel, collision_info)
         done = reward_processor.isDone(reward)
         logging.info('Action, Reward, Done: {} {} {}'.format(
             action, reward, done))

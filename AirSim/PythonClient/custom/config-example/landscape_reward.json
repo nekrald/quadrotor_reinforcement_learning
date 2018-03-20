@@ -16,10 +16,10 @@
         "scaling_factor": 5
     },
     "reward_config": {
-        "collision_penalty": -1,
+        "collision_penalty": -100,
         "reward_type": "landscape_reward",
         "goal_point": [-202.82, -129.97, 0],
-        "large_dist_penalty": -0.1,
+        "large_dist_penalty": -20,
         "large_dist_coef": 0.5,
         "thresh_dist": 7
     }
