@@ -6,12 +6,15 @@ import numpy as np
 from enum import Enum
 from AirSimClient import AirSimImageType, ImageRequest
 from custom.constants import RootConfigKeys, RewardConfigKeys
+from scipy.spatial.distance import cityblock
+from scipy.spatial.distance import euclidean
 
 
 class RewardType(object):
     EXPLORATION_REWARD = "exploration"
     PATH_REWARD = "path"
     LANDSCAPE_REWARD = "LANDSCAPE_REWARD"
+    CORRIDOR_REWARD = "corridor"
 
 
 class ExplorationReward(object):
@@ -187,6 +190,97 @@ class LandscapeReward(object):
         return reward
 
 
+class CorridorReward(object):
+    def __init__(self, client,
+                 collision_penalty=-200, height_penalty=-100,
+                 used_cams=[3], vehicle_rad=0.5, thresh_dist=3,
+                 goal_id=0, max_height = 40):
+        self.collision_penalty = collision_penalty
+        self.client = client
+        self.used_cams = used_cams
+        self.vehicle_rad = vehicle_rad
+        self.tau_d = thresh_dist
+        self.goal_id = goal_id
+        self.max_height = -max_height
+        self.height_penalty = height_penalty
+        self.starting_point = np.array([0, 0, 0])
+
+    def isDone(self, reward):
+        done = 0
+        if reward <= self.collision_penalty:
+            done = 1
+        return done
+
+    def compute_reward(self, quad_state, quad_vel, collision_info):
+        if collision_info.has_collided:
+            logging.info("Submitting collision penalty.")
+            reward = self.collision_penalty
+        elif quad_state.z_val < self.max_height:
+            logging.info("Height reward submisson.")
+            reward = quad_state.z_val * self.height_penalty
+        else:
+            logging.info("Reward by distance.")
+            client = self.client
+            INF = 1e100
+            min_depth_perspective = INF
+            min_depth_vis = INF
+            min_depth_planner = INF
+            for camera_id in self.used_cams:
+                requests = [
+                    ImageRequest(camera_id, query, True, False)
+                    for query in [
+                        AirSimImageType.DepthPerspective,
+                        AirSimImageType.DepthVis,
+                        AirSimImageType.DepthPlanner
+                    ]]
+                responses = client.simGetImages(requests)
+
+                depth_perspective_array = np.array(responses[0].image_data_float)
+                depth_vis_array = np.array(responses[1].image_data_float)
+                depth_planner_array = np.array(responses[2].image_data_float)
+
+
+                arrays = [depth_perspective_array,
+                          depth_vis_array,
+                          depth_planner_array]
+                results = []
+
+                for idx, item in enumerate(arrays):
+                    shape = int(item.shape[0] ** 0.5)
+                    item = item.reshape((shape, shape))
+                    arrays[idx] = item
+                    min_x = int(shape / 2. - 35.)
+                    max_x = int(shape /2. + 35.)
+                    min_x = max(min_x, 0)
+                    max_x = min(max_x, shape)
+                    slice = item[min_x : max_x, :]
+                    results.append(np.min(slice))
+
+                min_depth_perspective = min(results[0], min_depth_perspective)
+                min_depth_vis = min(min_depth_vis, results[1])
+                min_depth_planner = min(min_depth_planner, results[2])
+            goals = np.array([min_depth_perspective, min_depth_vis,
+                              min_depth_planner])
+            logging.info(
+                "ExplorationReward: these are the goals = {}".format(
+                    goals))
+            dist = goals[self.goal_id]
+            logging.info("Dist = {}".format(dist))
+            reward = (dist * 110 - 1.5 * self.vehicle_rad) / (
+                    self.tau_d - self.vehicle_rad)
+            logging.debug("ExplorationReward: before truncating" + \
+                          " we have = {}".format(reward))
+            reward = min(reward, 20)
+
+            current_point_xy = np.array([quad_state.x_val, quad_state.y_val, 0])
+            reward += cityblock(self.starting_point, current_point_xy)
+
+            z_penalty = euclidean(self.starting_point, np.array([0, 0, quad_state.z_val]))
+            reward -= np.exp(z_penalty)
+            logging.debug("ExplorationReward: after truncation" + \
+                          " we obtained {}".format(reward))
+        return reward
+
 def make_reward(config, client):
     reward_config = config[RootConfigKeys.REWARD_CONFIG]
     reward_type = reward_config[RewardConfigKeys.REWARD_TYPE]
@@ -227,6 +321,14 @@ def make_reward(config, client):
         dist_penalty = reward_config[
                 RewardConfigKeys.PATH_LARGE_DIST_PENALTY]
         reward = LandscapeReward(goal_point, collision_penalty, dist_penalty, client)
+    elif reward_type == RewardType.CORRIDOR_REWARD:
+        used_cams = reward_config[RewardConfigKeys.EXPLORE_USED_CAMS_LIST]
+        vehicle_rad = reward_config[RewardConfigKeys.EXPLORE_VEHICLE_RAD]
+        goal_id = reward_config[RewardConfigKeys.EXPLORE_GOAL_ID]
+        max_height = reward_config[RewardConfigKeys.EXPLORE_MAX_HEIGHT]
+        height_penalty = reward_config[RewardConfigKeys.EXPLORE_HEIGHT_PENALTY]
+        reward = CorridorReward(client, collision_penalty, height_penalty, used_cams, vehicle_rad, thresh_dist, goal_id,
+                                max_height)
     else:
         raise ValueError("Unknown reward type!")
     return reward

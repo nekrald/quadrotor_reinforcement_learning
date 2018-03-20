@@ -38,7 +38,7 @@ def main(config, args):
     client.reset()
     client.enableApiControl(True)
     client.armDisarm(True)
-    client.takeoff()
+    # client.takeoff()
 
     initial_position = client.getPosition()
     if config[RootConfigKeys.USE_FLAG_POS]:
