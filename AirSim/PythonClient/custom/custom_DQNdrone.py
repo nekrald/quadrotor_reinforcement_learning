@@ -92,14 +92,19 @@ def main(config, args):
 
         action = agent.act(current_state)
         quad_offset = action_processor.interpret_action(action)
-        client.moveByVelocity(
-            quad_offset[0],
-            quad_offset[1],
-            quad_offset[2], move_duration, DrivetrainType.ForwardOnly)
-        time.sleep(config[RootConfigKeys.SLEEP_TIME])
+        if len(quad_offset) == 1:
+            client.rotateByYawRate(quad_offset[0], 2*move_duration)
+            time.sleep(2*config[RootConfigKeys.SLEEP_TIME])
+        else:
+            client.moveByVelocity(
+                quad_offset[0],
+                quad_offset[1],
+                quad_offset[2], move_duration, DrivetrainType.ForwardOnly)
+            time.sleep(config[RootConfigKeys.SLEEP_TIME])
 
         quad_state = client.getPosition()
         quad_vel = client.getVelocity()
+        logging.info('Current velocity: {}, {}, {}'.format(quad_vel.x_val, quad_vel.y_val, quad_vel.z_val))
         collision_info = client.getCollisionInfo()
 
         reward = reward_processor.compute_reward(
@@ -121,8 +126,10 @@ def main(config, args):
             time.sleep(config[RootConfigKeys.SLEEP_TIME])
         current_step += 1
 
-        responses = client.simGetImages([ImageRequest(3,
-            AirSimImageType.DepthPerspective, True, False)])
+        responses = client.simGetImages(
+            [ImageRequest(3, AirSimImageType.DepthPerspective, True, False),
+             ImageRequest(3, AirSimImageType.Segmentation, True, False)
+             ])
         current_state = transform_input(responses)
 
 

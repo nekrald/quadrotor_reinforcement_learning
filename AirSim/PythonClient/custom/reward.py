@@ -11,7 +11,7 @@ from custom.constants import RootConfigKeys, RewardConfigKeys
 class RewardType(object):
     EXPLORATION_REWARD = "exploration"
     PATH_REWARD = "path"
-    LANDSCAPE_REWARD = "LANDSCAPE_REWARD"
+    LANDSCAPE_REWARD = "landscape_reward"
 
 
 class ExplorationReward(object):
@@ -133,10 +133,12 @@ class PathReward(object):
 
 class LandscapeReward(object):
 
-    def __init__(self, goal_point, collision_penalty=-100, large_dist_penalty=-10, client=None):
+    def __init__(self, goal_point, collision_penalty=-100, large_dist_penalty=-10,
+                 large_dist_coef=0.5, client=None):
         self.goal_point = goal_point
         self.collision_penalty = collision_penalty
         self.large_dist_penalty = large_dist_penalty
+        self.large_dist_coef = large_dist_coef
         self.client = client
 
     def isDone(self, reward):
@@ -147,19 +149,18 @@ class LandscapeReward(object):
         return done
 
     def compute_reward(self, quad_state, quad_vel, collision_info):
-        quad_pt = np.array(list((quad_state.x_val, quad_state.y_val,
-            quad_state.z_val)))
+        quad_pt = np.array(list((quad_state.x_val, quad_state.y_val, 0)))
         if collision_info.has_collided:
             reward = self.collision_penalty
         else:
             dist = np.linalg.norm(quad_pt - self.goal_point)
             reward = 1 / (1 + dist)
-            print('Current distance: ', dist)
+            logging.info('Current distance: ' + str(dist))
 
             dist_initial = np.linalg.norm(self.goal_point)
             reward_base = 1 / (1 + dist_initial)
 
-            if reward <= 0.1 * reward_base:
+            if reward <= 0.5 * reward_base:
                 reward = self.large_dist_penalty
         return reward
 
@@ -201,9 +202,9 @@ def make_reward(config, client):
             collision_penalty, dist_penalty, client)
     elif reward_type == RewardType.LANDSCAPE_REWARD:
         goal_point = np.array(reward_config[RewardConfigKeys.LANDSCAPE_GOAL_POINT])
-        dist_penalty = reward_config[
-                RewardConfigKeys.PATH_LARGE_DIST_PENALTY]
-        reward = LandscapeReward(goal_point, collision_penalty, dist_penalty, client)
+        dist_penalty = reward_config[RewardConfigKeys.LANDSCAPE_LARGE_DIST_PENALTY]
+        dist_coef = reward_config[RewardConfigKeys.LANDSCAPE_LARGE_DIST_COEF]
+        reward = LandscapeReward(goal_point, collision_penalty, dist_penalty, dist_coef, client)
     else:
         raise ValueError("Unknown reward type!")
     return reward

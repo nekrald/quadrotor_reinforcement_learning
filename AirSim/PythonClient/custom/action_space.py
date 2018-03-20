@@ -36,22 +36,33 @@ class DefaultActionSpace(object):
         return self.num_actions
 
 class FlatActionSpace(object):
-    def __init__(self, scaling_factor=0.25):
+    def __init__(self, scaling_factor=0.25, backward_coef=0.25, sideways_coef=0.5, yaw_degree=20):
         self.scaling_factor = scaling_factor
-        self.num_actions = 5
+        self.backward_coef = backward_coef
+        self.sideways_coef = sideways_coef
+        self.yaw_degree = yaw_degree
+        self.num_actions = 7
 
     def interpret_action(self, action):
         scaling_factor = self.scaling_factor
+        backward_coef = self.backward_coef
+        sideways_coef = self.sideways_coef
+        yaw_degree = self.yaw_degree
+
         if action == 0:
-            quad_offset = (0, 0, 0)
-        elif action == 1:
             quad_offset = (scaling_factor, 0, 0)
+        elif action == 1:
+            quad_offset = (-backward_coef*scaling_factor, 0, 0)
         elif action == 2:
-            quad_offset = (0, scaling_factor, 0)
+            quad_offset = (0, sideways_coef*scaling_factor, 0)
         elif action == 3:
-            quad_offset = (-scaling_factor, 0, 0)
+            quad_offset = (0, -sideways_coef*scaling_factor, 0)
         elif action == 4:
-            quad_offset = (0, -scaling_factor, 0)
+            quad_offset = (0, 0, scaling_factor)
+        elif action == 5:
+            quad_offset = (yaw_degree,)
+        elif action == 6:
+            quad_offset = (-yaw_degree,)
         return quad_offset
 
     def get_num_actions(self):
