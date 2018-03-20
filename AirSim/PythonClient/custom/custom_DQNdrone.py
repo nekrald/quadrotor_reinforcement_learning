@@ -87,6 +87,7 @@ def main(config, args):
 
     move_duration = config[RootConfigKeys.MOVE_DURATION]
 
+    sum_rewards = 0
     steps_now = 0
     while current_step < max_steps:
         steps_now += 1
@@ -120,12 +121,16 @@ def main(config, args):
         if reward_processor.reward_type == RewardType.LANDSCAPE_REWARD:
             reward = reward_processor.compute_reward(
                 quad_state, quad_prev_state, collision_info)
+            sum_rewards += reward
+            done = reward_processor.isDone(sum_rewards)
+            logging.info('Action, Reward, SumRewards, Done: {} {} {} {}'.format(
+                action, reward, sum_rewards, done))
         else:
             reward = reward_processor.compute_reward(
                     quad_state, quad_vel, collision_info)
-        done = reward_processor.isDone(reward)
-        logging.info('Action, Reward, Done: {} {} {}'.format(
-            action, reward, done))
+            done = reward_processor.isDone(reward)
+            logging.info('Action, Reward, Done: {} {} {}'.format(
+                action, reward, done))
 
         agent.observe(current_state, action, reward, done)
         agent.train()
@@ -141,6 +146,7 @@ def main(config, args):
             if not config[RootConfigKeys.USE_FLAG_POS]:
                 client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
             steps_now = 0
+            sum_rewards = 0
         current_step += 1
 
         responses = client.simGetImages(
