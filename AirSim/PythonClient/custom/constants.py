@@ -4,6 +4,7 @@ import os
 class RootConfigKeys(object):
     TRAIN_AFTER = "train_after"
     SLEEP_TIME = "sleep_time"
+    ANNEALING_STEPS = "annealing_steps"
     INIT_X = "initX"
     INIT_Y = "initY"
     INIT_Z = "initZ"

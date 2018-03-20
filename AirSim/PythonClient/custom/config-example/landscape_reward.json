@@ -1,6 +1,7 @@
 {
     "train_after": 1000,
     "sleep_time": 1,
+    "annealing_steps": 50000,
     "initX": -0.55265,
     "initY": -31.9786,
     "initZ": -19.0225,

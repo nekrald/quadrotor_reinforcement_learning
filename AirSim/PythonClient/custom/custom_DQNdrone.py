@@ -77,17 +77,13 @@ def main(config, args):
 
     if args.no_random:
         explorer = ConstantExplorer(0)
-        agent = DeepQAgent((NumBufferFrames, SizeRows, SizeCols),
-            NumActions, explorer=explorer, monitor=True, train_after=train_after,
-            memory_size=memory_size, train_interval=train_interval,
-            target_update_interval=update_interval, traindir_path=args.traindir,
-            checkpoint_path=args.checkpoint)
     else:
-        agent = DeepQAgent((NumBufferFrames, SizeRows, SizeCols),
-                           NumActions, monitor=True, train_after=train_after,
-                           memory_size=memory_size, train_interval=train_interval,
-                           target_update_interval=update_interval, traindir_path=args.traindir,
-                           checkpoint_path=args.checkpoint)
+        explorer = LinearEpsilonAnnealingExplorer(1, 0.1, config[RootConfigKeys.ANNEALING_STEPS])
+    agent = DeepQAgent((NumBufferFrames, SizeRows, SizeCols),
+        NumActions, explorer=explorer, monitor=True, train_after=train_after,
+        memory_size=memory_size, train_interval=train_interval,
+        target_update_interval=update_interval, traindir_path=args.traindir,
+        checkpoint_path=args.checkpoint)
 
     move_duration = config[RootConfigKeys.MOVE_DURATION]
 
