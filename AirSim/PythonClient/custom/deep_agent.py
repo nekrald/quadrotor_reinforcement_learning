@@ -149,6 +149,7 @@ class DeepQAgent(object):
 
         if checkpoint_path is not None:
             self._trainer.restore_from_checkpoint(checkpoint_path)
+            self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
     def act(self, state):
         """ This allows the agent to select the next action to perform in regard of the current state of the environment.
