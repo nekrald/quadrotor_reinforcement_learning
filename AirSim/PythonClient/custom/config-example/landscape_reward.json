@@ -10,7 +10,7 @@
     "epoch_number": 100,
     "max_steps_mul": 10000,
     "memory_size": 5000,
-    "target_update_interval": 50000,
+    "target_update_interval": 5000,
     "train_interval": 4,
     "action_config": {
         "action_space_type": "flat",
