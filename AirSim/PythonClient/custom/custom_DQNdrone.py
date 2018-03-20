@@ -25,6 +25,7 @@ from custom.constants import RootConfigKeys, ActionConfigKeys, \
 from custom.dqn_log import configure_logging
 from custom.config import make_default_root_config,\
         make_default_action_config, make_default_reward_config
+from custom.exploration import LinearEpsilonAnnealingExplorer, ConstantExplorer
 
 
 def main(config, args):
@@ -74,11 +75,21 @@ def main(config, args):
             RootConfigKeys.TARGET_UPDATE_INTERVAL]
     train_interval = config[
             RootConfigKeys.TRAIN_INTERVAL]
-    agent = DeepQAgent((NumBufferFrames, SizeRows, SizeCols),
-        NumActions, monitor=True, train_after=train_after,
-        memory_size=memory_size, train_interval=train_interval,
-        target_update_interval=update_interval, traindir_path=args.traindir,
-        checkpoint_path=args.checkpoint)
+
+    if args.no_random:
+        explorer = ConstantExplorer(0)
+        agent = DeepQAgent((NumBufferFrames, SizeRows, SizeCols),
+            NumActions, explorer=explorer, monitor=True, train_after=train_after,
+            memory_size=memory_size, train_interval=train_interval,
+            target_update_interval=update_interval, traindir_path=args.traindir,
+            checkpoint_path=args.checkpoint)
+    else:
+        agent = DeepQAgent((NumBufferFrames, SizeRows, SizeCols),
+                           NumActions, monitor=True, train_after=train_after,
+                           memory_size=memory_size, train_interval=train_interval,
+                           target_update_interval=update_interval, traindir_path=args.traindir,
+                           checkpoint_path=args.checkpoint)
+
     move_duration = config[RootConfigKeys.MOVE_DURATION]
 
     steps_now = 0
@@ -180,6 +191,7 @@ def parse_arguments():
     parser.add_argument('--checkpoint', default=None, type=str, metavar='DNN', help='path-to-checkpoint')
     parser.add_argument('--forward-only', action='store_true')
     parser.add_argument('--max-flight-steps', default=2500, metavar='DURATION', type=int)
+    parser.add_argument('--no-random', action='store_true')
     args = parser.parse_args()
     return args
 
