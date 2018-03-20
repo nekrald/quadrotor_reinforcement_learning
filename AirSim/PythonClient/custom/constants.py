@@ -40,6 +40,8 @@ class RewardConfigKeys(object):
     PATH_LARGE_DIST_PENALTY = "large_dist_penalty"
 
     LANDSCAPE_GOAL_POINT = "goal_point"
+    LANDSCAPE_LARGE_DIST_PENALTY = "large_dist_penalty"
+    LANDSCAPE_LARGE_DIST_COEF = "large_dist_coef"
 
 
 class RewardConstants:
