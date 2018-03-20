@@ -2,14 +2,10 @@
 import sys
 import os
 import logging
-import csv
 import json
-import copy
 import shutil
 import argparse
 import time
-
-import numpy as np
 
 
 file_dir = os.path.dirname(__file__)
@@ -23,10 +19,7 @@ from AirSimClient import *
 from custom.action_space import DefaultActionSpace, \
     GridActionSpace, make_action, ActionSpaceType
 from custom.reward import PathReward, make_reward, RewardType
-from custom.replay_memory import ReplayMemory
-from custom.history import History
 from custom.deep_agent import DeepQAgent, huber_loss, transform_input
-from custom.exploration import LinearEpsilonAnnealingExplorer
 from custom.constants import RootConfigKeys, ActionConfigKeys, \
         RewardConfigKeys, RewardConstants, ActionConstants
 from custom.dqn_log import configure_logging
@@ -42,6 +35,7 @@ def main(config, args):
     # Connect to the AirSim simulator.
     client = MultirotorClient()
     client.confirmConnection()
+    client.reset()
     client.enableApiControl(True)
     client.armDisarm(True)
 
@@ -53,9 +47,8 @@ def main(config, args):
     else:
         logging.info("Ignoring flag. Using coordinates (X, Y, Z):{}, Rotation:{}".format((initX, initY, initZ), (0, 0, 0)))
         client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
-    client.reset()
-    client.enableApiControl(True)
-    client.armDisarm(True)
+
+
     # Train
     epoch = config[RootConfigKeys.EPOCH_COUNT]
     max_steps = epoch * config[RootConfigKeys.MAX_STEPS_MUL]
@@ -91,18 +84,24 @@ def main(config, args):
         logging.info("Processing current_step={}".format(current_step))
 
         action = agent.act(current_state)
+        logging.info("Selected action = {}!".format(action))
         quad_offset = action_processor.interpret_action(action)
-        if len(quad_offset) == 1:
-            client.rotateByYawRate(quad_offset[0], 2*move_duration)
-            time.sleep(2*config[RootConfigKeys.SLEEP_TIME])
+
+        if args.forward_only:
+            if len(quad_offset) == 1:
+                client.rotateByYawRate(quad_offset[0], 2 * move_duration)
+                time.sleep(config[RootConfigKeys.SLEEP_TIME])
+            else:
+                client.moveByVelocity(quad_offset[0], quad_offset[1],
+                    quad_offset[2], move_duration, DrivetrainType.ForwardOnly)
+                time.sleep(config[RootConfigKeys.SLEEP_TIME])
         else:
-            client.moveByVelocity(
-                quad_offset[0],
-                quad_offset[1],
-                quad_offset[2], move_duration, DrivetrainType.ForwardOnly)
-            time.sleep(config[RootConfigKeys.SLEEP_TIME])
+            client.moveByVelocity(quad_offset[0], quad_offset[1],
+                quad_offset[2], move_duration, DrivetrainType.MaxDegreeOfFreedom)
+        time.sleep(config[RootConfigKeys.SLEEP_TIME])
 
         quad_state = client.getPosition()
+        logging.info("Current quad position: {}".format(quad_state))
         quad_vel = client.getVelocity()
         logging.info('Current velocity: {}, {}, {}'.format(quad_vel.x_val, quad_vel.y_val, quad_vel.z_val))
         collision_info = client.getCollisionInfo()
@@ -117,13 +116,12 @@ def main(config, args):
         agent.train()
 
         if done:
-            if config[RootConfigKeys.USE_FLAG_POS]:
-                client.reset()
-            else:
-                client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
+            logging.info("Done requested.")
+            client.reset()
             client.enableApiControl(True)
             client.armDisarm(True)
-            time.sleep(config[RootConfigKeys.SLEEP_TIME])
+            if not config[RootConfigKeys.USE_FLAG_POS]:
+                client.simSetPose(Pose(Vector3r(initX, initY, initZ), AirSimClientBase.toQuaternion(0, 0, 0)), ignore_collison=True)
         current_step += 1
 
         responses = client.simGetImages(
@@ -170,13 +168,16 @@ def init_and_dump_configs():
         with open("config-example/" + name + ".json", "w") as f:
             json.dump(config, f, indent=4)
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='DQNdrone for AirSim')
     parser.add_argument('config', metavar='CONFIG', type=str, help='path-to-file-with-config')
     parser.add_argument('--traindir', default='traindir', type=str, metavar='DIR', help='path-to-traindir')
     parser.add_argument('--checkpoint', default=None, type=str, metavar='DNN', help='path-to-checkpoint')
+    parser.add_argument('--forward-only', action='store_true')
     args = parser.parse_args()
     return args
+
 
 if __name__ == "__main__":
     args = parse_arguments()

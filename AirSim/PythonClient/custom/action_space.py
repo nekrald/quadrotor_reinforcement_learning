@@ -91,6 +91,7 @@ def make_action(config):
     action_config = config[RootConfigKeys.ACTION_CONFIG]
     scale_factor = action_config[ActionConfigKeys.SCALING_FACTOR]
     if action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.DEFAULT_SPACE:
+        print("Selected default action space")
         action = DefaultActionSpace(scale_factor)
     elif action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.GRID_SPACE:
         action = GridActionSpace(scale_factor, action_config[ActionConfigKeys.GRID_SIZE])

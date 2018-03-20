@@ -28,7 +28,7 @@ class MsgpackMixin:
         return obj
 
 
-class AirSimImageType:
+class AirSimImageType:    
     Scene = 0
     DepthPlanner = 1
     DepthPerspective = 2
