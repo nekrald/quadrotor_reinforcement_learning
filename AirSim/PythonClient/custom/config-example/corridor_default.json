@@ -12,7 +12,7 @@
     "target_update_interval": 5000,
     "train_interval": 4,
     "action_config": {
-        "action_space_type": "default",
+        "action_space_type": "corridor",
         "scaling_factor": 0.5
     },
     "reward_config": {
