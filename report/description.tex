@@ -5,6 +5,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath,amssymb}
 \usepackage{chngpage}
+\usepackage{graphicx}
 \DeclareMathOperator{\E}{\mathbb{E}}
 \DeclareMathOperator{\D}{\mathbb{D}}
 
@@ -73,7 +74,8 @@ that simulated behavior closely mimics the real-world.
 
 AirSim  is  an  open-source  platform \cite{airsim2017fsr} by Microsoft, 
 that  aims  to  narrow  the  gap  between
-simulation  and  reality  in  order  to  aid  development  of  autonomous  vehicles.  
+simulation  and  reality  in  order  to  
+aid  development  of  autonomous  vehicles.  
 The platform is based on the Unreal Engine, and seeks to positively 
 influence development and testing of data-driven
 machine intelligence techniques such as reinforcement learning and 
@@ -82,25 +84,128 @@ related work), and proved to be very useful in this project development.
 
 \section{Project description and approach using Reinforcement Learning}
 
-\section{Description of the framework Architecture}
+The project is about collision avoidance in AirSim + 
+UnrealEngine environment, using deep reinforcement learning.
 
-Architecture consists of the following classes. The main character is Agent, which can act, observe and train.
-To make agent more readable, we separated History and ExperienceReplayMemory into separated classes.
-With the goal of making substitutable actions and rewards, we introduced classes ActionSpace and Reward.
-To control exploration-exploatation dilemma, we created module to handle exploration (with Explorer classes).
+{\bf Reinforcement learning }(RL) is an area of machine learning inspired 
+by behaviorism, concerned with how agents ought to take actions in an 
+environment so as to maximize some notion of cumulative reward. 
+The problem, due to its generality, is studied in many other disciplines, 
+such as game theory, control theory, operations research, information theory, 
+simulation-based optimization, multi-agent systems, swarm intelligence, 
+statistics and genetic algorithms. In the operations research and 
+control literature, reinforcement learning is called approximate dynamic 
+programming. The approach has been studied in the optimal control theory, 
+though most studies are concerned with the existence of optimal 
+solutions and their characterization, and not with learning or approximation.
 
-Our implementation uses deep learning libraries CNTK and TensorFlow (with Tensorboard).
+{\bf $Q$-learning} is a model-free reinforcement learning technique. 
+It is able to compare the expected utility of the available actions 
+(for a given state) without requiring a model of the environment. 
+Additionally, $Q$-learning can handle problems with stochastic 
+transitions and rewards, without requiring adaptations.
+
+It has been proven that for any finite Markov decision process (MDP), 
+$Q$-learning eventually finds an optimal policy, in the sense that the 
+expected value of the total reward return over all successive steps, 
+starting from the current state, is the maximum achievable.
+
+Specifically, $Q$-learning can identify an optimal 
+action-selection policy for any given (finite) MDP.
+It works by learning an action-value function $Q(s, a)$, which 
+ultimately gives the expected utility of a given action $a$ 
+while in a given state $s$ and following an optimal policy thereafter. 
+A policy $\pi$, is a rule that the agent follows in selecting actions, 
+given the state it is in. When such an action-value function is learned, 
+the optimal policy can be constructed by selecting 
+the action with the highest value in each state.
+
+The problem space consists of an agent, a set of states $S$, 
+and a set of actions per state $A$. By performing an action $a \in A$, 
+the agent can move from state to state. Executing an action in a 
+specific state provides the agent with a reward (a numerical score). 
+The goal of the agent is to maximize its total (future) reward. 
+It does this by learning which action is optimal for each state. 
+The action that is optimal for each state is the action that has 
+the highest long-term reward. This reward is a weighted sum of 
+the expected values of the rewards of all future steps starting from 
+the current state, where the weight for a step from a state $\Delta t$ 
+steps into the future is calculated as $\gamma^{\Delta t}$. 
+Here, $\gamma$ is a number between 0 and 1 ($0 \le \gamma \le 1$) called 
+the {\it{discount factor}} and trades off the importance of earlier 
+versus later rewards. $\gamma$ may also be interpreted as the 
+probability to succeed (or survive) at every step $\Delta t$.
+
+The algorithm, therefore, has a function that calculates 
+the quality of a state-action combination:
+
+$$Q: S \times A \to \mathbb{R}$$
+
+Before learning begins, $Q$ is initialized to a possibly arbitrary fixed value. 
+Then, at each time $t$, the agent selects an action $a_t$, observes a reward $r_t$, 
+enters a new state $s_{t+1}$ (that may depend on both the previous state $s_t$ 
+and the selected action), and $Q$ is updated. 
+
+$$Q(s_{t},a_{t}) \leftarrow (1-\alpha) \cdot 
+\underbrace{Q(s_{t},a_{t})}_{\rm old~value} + 
+\underbrace{\alpha}_{\rm learning~rate} \cdot  
+\overbrace{\bigg( \underbrace{r_{t}}_{\rm reward} + 
+\underbrace{\gamma}_{\rm discount~factor} \cdot 
+\underbrace{\max_{a}Q(s_{t+1}, a)}_{\rm 
+estimate~of~optimal~future~value} \bigg) }^{\rm learned~value} $$
+
+where $r_{t}$ is the reward observed for the current state 
+$s_t$, and $\alpha$ is the learning rate.
+
+
+\section{Description of the framework architecture}
+
+Architecture consists of the following classes. The main character is 
+Agent, which can act, observe and train.
+To make agent more readable, we separated History and 
+ExperienceReplayMemory into separated classes.
+With the goal of making substitutable actions and rewards, 
+we introduced classes ActionSpace and Reward.
+To control exploration-exploatation dilemma, we created module to 
+handle exploration (with Explorer classes).
+
+Our implementation uses deep learning libraries CNTK 
+and TensorFlow (with Tensorboard).
 
 \section{Considered Environments}
 
 \section{Agent: Deep Q-learning}
 
-\subsection{General description} We are based on the deep reinforcement
+\subsection{General description} 
+
+We are based on the deep reinforcement
 Q-learning, which was first described in \cite{mnih2013playing}.
 After a while, more sophisticated version was published in 
 \cite{mnih2015humanlevel}.
 
+ To use reinforcement learning successfully in situations
+approaching real-world complexity, however, agents are confronted
+with a difficult task: they must derive efficient representations of the
+environment from high-dimensional sensory inputs, and use these
+to generalize past experience to new situations. Remarkably, humans
+and other animals seem to solve this problem through a harmonious
+combination of reinforcement learning and hierarchical sensory pro-
+cessing systems, the former evidenced by a wealth of neural data
+revealing notable parallels between the phasic signals emitted by 
+dopaminergic neurons and temporal difference reinforcement learning
+algorithms. Recent advances in training deep neural networks allow to
+develop an artificial agent, termed a deep Q-network, that can
+learn successful policies directly from high-dimensional sensory inputs
+using end-to-end reinforcement learning. 
+
+To train the network, standard Q-learning update is converted into the
+following loss:
+
+$$L(\theta_i) = \mathbb{E}_{s,a,r,s'} \left[ \left(r + \gamma \max_{a'}Q(s', a'; \theta^{-}) - Q(s, a; \theta_i) \right)^2 \right] $$
+
 \subsection{Network architecture}
+
+\includegraphics[scale=0.3]{dqn_crop.png}
 
 \subsection{Applied tweaks}
 
