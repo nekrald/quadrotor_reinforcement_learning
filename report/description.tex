@@ -254,17 +254,16 @@ $$L(\theta_i) = \mathbb{E}_{s,a,r,s'} \left[ \left(r + \gamma \max_{a'}Q(s', a';
         Also we penalize going too high.
     \item {\bf Path Reward.} We force collision avoidance to fixed lines, and penalize going far wary from them.
     \item {\bf Landscape Reward.} The aim is to reach the goal point in the environment. Therefore the reward is the difference $\text{dist}_{\text{prev}} - \text{dist}$ where $\text{dist}_{\text{prev}}$ is the distance to the goal in the previous state and $\text{dist}$ is distance to the goal in the current state. 
-    \item {\bf Corridor Reward.}
+    \item {\bf Corridor Reward.} The reward was inspired by the original paper, as well as  The reward was inspired by the original paper\cite{cad2rl}, as well as some additional considerations about the geometry of a closed space such as a corridor. We try to hardly penalize big changes in altitude(Z axis) as well as reward additional discovery via cityblock distance.  
 \end{itemize}
 
 \section{Implemented Action Spaces}
 
 \begin{itemize}
-    \item {\bf Grid Action Space.} Frontal camera image is separated into $M^2$ parts, which correspond to moving actions. Moving forward is
-        mandatory.
+    \item {\bf Grid Action Space.} Frontal camera image is separated into $M^2$ parts, which correspond to moving actions. Moving forward is mandatory.
     \item {\bf Canonical (Default) Action Space.} Forward, Backward, Up, Down, Left, Right, Stay.
     \item {\bf Flat Action Space.} No up or down, rotations introduced.
-    \item {\bf Corridor Action Space.}
+    \item {\bf Corridor Action Space.} This action space is just a default with added turns to give quadrotor ability to maneuver through the rather tight corners of the corridor. 
 \end{itemize}
 
 \section{Exploration}
@@ -275,6 +274,8 @@ $$L(\theta_i) = \mathbb{E}_{s,a,r,s'} \left[ \left(r + \gamma \max_{a'}Q(s', a';
         Schedule is exponential.
 \end{itemize}
 
+Note, that in contrast with using choosing random actions in settings when it almost sertainly leads to some exploration, in our case using uniform probabilities on all actions could result in agent hardly moving, since expectation of such random walk is zero along any chosen axis. Implementing strategy that samples forward movement when exploring with bigger probability resulted in faster learning.  
+
 \section{Results}
 
 Due to file page count limitation, we here present 
@@ -282,7 +283,6 @@ only two graphs amoung all working launches (landscape, blocks, corridor, cave).
 All other graphs can be found in our github repository, and look similar.
 
 Corridor:
-
 \includegraphics[scale=0.2]{plots/corridor_loss.png}
 \includegraphics[scale=0.2]{plots/corridor_rewards.png}
 
