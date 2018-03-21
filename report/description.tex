@@ -13,18 +13,45 @@
 \title{Machine Learning Project 2018: With Cherry Flavor}
 \maketitle
 
+\small
+
 \section{Introduction}
 
-\cite{cad2rl}
+Indoor  navigation  and  collision  avoidance  is  one  of  the
+basic  requirements  for  robotic  systems  that  must  operate  in
+unstructured  open-world  environments,  including  quadrotors,
+mobile  manipulators,  and  other  mobile  robots.  Many  of  the
+most successful approaches to indoor navigation have used
+mapping  and  localization  techniques  based  on  3D  
+perception,  including  SLAM,  depth  sensors,  stereo  cameras,  
+and  monocular  cameras  using  structure  from  motion. 
+The use of sophisticated sensors and specially mounting multiple 
+cameras on the robot imposes additional costs on
+a  robotic  platform,  which  is  a  particularly  prominent  issue
+for weight and power constrained systems such as lightweight
+aerial vehicles. Monocular cameras, on the other hand, require
+3D  estimation  from  motion,  which  remains  a  challenging
+open  problem  despite  considerable  recent  progress.
+In this project we are based on the paper \cite{cad2rl}, 
+and explore a learning-based approach for indoor
+navigation,  which  directly  predicts  collision-free
+commands from monocular images, without attempting to 
+explicitly  model  or  represent  the  3D  structure  
+of  the  environment.
 
-
-Here will go  brief problem formulation.
-
-\subsection{Reinforcement Learning}
-
-Here we explain what is Reinforcement Learning.
+To model the environment, we use Unreal Engine and AirSim.
 
 \subsection{Unreal Engine}
+
+The Unreal Engine is a game engine developed by Epic Games, 
+first showcased in the 1998 first-person shooter game Unreal. 
+Although primarily developed for first-person shooters, it has 
+been successfully used in a variety of other genres, including 
+stealth, fighting games, MMORPGs, and other RPGs. With its code 
+written in C++, the Unreal Engine features a high degree of portability 
+and is a tool used by many game developers today. It has won several 
+awards, including the Guinness World Records award 
+for "most successful video game engine."
 
 \subsection{AirSim}
 
@@ -53,6 +80,8 @@ machine intelligence techniques such as reinforcement learning and
 deep learning. It is inspired by several previous simulators (see 
 related work), and proved to be very useful in this project development.
 
+\section{Project description and approach using Reinforcement Learning}
+
 \section{Description of the framework Architecture}
 
 Architecture consists of the following classes. The main character is Agent, which can act, observe and train.
@@ -76,13 +105,12 @@ After a while, more sophisticated version was published in
 \subsection{Applied tweaks}
 
 \begin{itemize}
-        \item Experience Replay.
-        \item Freezed network to reduce correlation.
-        \item TD Update 
-        \item Huber Loss
-        \item 4-frame delayed learning
+    \item Experience Replay.
+    \item Freezed network to reduce correlation.
+    \item TD Update 
+    \item Huber Loss
+    \item 4-frame delayed learning
 \end{itemize}
-
 
 \section{Implemented Rewards}
 
