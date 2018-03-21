@@ -9,6 +9,16 @@ from cntk.ops import abs, argmax, element_select, less, relu, reduce_max, reduce
 from cntk.ops.functions import CloneMethod, Function
 from cntk.train import Trainer
 
+class ConstantExplorer(object):
+    def __init__(self, random_proba):
+        self.epsilon = random_proba
+
+    def __call__(self, num_actions):
+        return np.random.choice(num_actions)
+
+    def is_exploring(self, step):
+        return np.random.rand() < self.epsilon
+
 
 class LinearEpsilonAnnealingExplorer(object):
     """

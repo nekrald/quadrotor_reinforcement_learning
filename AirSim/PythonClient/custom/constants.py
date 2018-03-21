@@ -4,6 +4,7 @@ import os
 class RootConfigKeys(object):
     TRAIN_AFTER = "train_after"
     SLEEP_TIME = "sleep_time"
+    ANNEALING_STEPS = "annealing_steps"
     INIT_X = "initX"
     INIT_Y = "initY"
     INIT_Z = "initZ"
@@ -40,6 +41,8 @@ class RewardConfigKeys(object):
     PATH_LARGE_DIST_PENALTY = "large_dist_penalty"
 
     LANDSCAPE_GOAL_POINT = "goal_point"
+    LANDSCAPE_LARGE_DIST_PENALTY = "large_dist_penalty"
+    LANDSCAPE_LARGE_DIST_COEF = "large_dist_coef"
 
 
 class RewardConstants:

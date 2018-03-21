@@ -1,0 +1,30 @@
+{
+    "train_after": 1000,
+    "sleep_time": 0.5,
+    "initX": -0.55265,
+    "initY": -31.9786,
+    "initZ": -19.0225,
+    "move_duration": 0.5,
+    "use_flag_position": true,
+    "epoch_number": 100,
+    "max_steps_mul": 10000,
+    "memory_size": 20000,
+    "target_update_interval": 5000,
+    "train_interval": 4,
+    "action_config": {
+        "action_space_type": "corridor",
+        "scaling_factor": 0.5
+    },
+    "reward_config": {
+        "collision_penalty": -100,
+        "thresh_dist": 3,
+        "reward_type": "corridor",
+        "used_cams": [
+            0,3,4
+        ],
+        "vehicle_radius": 2,
+        "goal_id": 2,
+        "max_height": 10,
+        "height_penalty": 5
+    }
+}
