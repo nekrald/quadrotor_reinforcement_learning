@@ -28,8 +28,30 @@ Here we explain what is Reinforcement Learning.
 
 \subsection{AirSim}
 
-Here we explain what is AirSim.
-\cite{airsim2017fsr}
+Recently, paradigms such as reinforcement learning, learning-by-demonstration
+and transfer learning are proving a natural means to train various robotics
+systems. One of the key challenges with these techniques is the high sample 
+complexity - the amount of training data needed to learn useful behaviors is often 
+prohibitively high. This issue is further exacerbated by the fact that autonomous 
+vehicles are often unsafe and expensive to operate during the training phase. In order to
+seamlessly operate in the real world, the robot needs to transfer the learning it does
+in simulation. Currently, this is a non-trivial task as simulated perception, environments 
+and actuators are often simplistic and lack the richness or diversity of the
+real world. For example, for robots that aim to use computer vision in outdoor 
+environments, it may be important to model real-world complex objects such as trees,
+roads, lakes, electric poles and houses along with rendering that includes finer 
+details such as soft shadows, specular reflections, diffused inter-reflections and so on.
+Similarly, it is important to develop more accurate models of system dynamics so
+that simulated behavior closely mimics the real-world.
+
+AirSim  is  an  open-source  platform \cite{airsim2017fsr} by Microsoft, 
+that  aims  to  narrow  the  gap  between
+simulation  and  reality  in  order  to  aid  development  of  autonomous  vehicles.  
+The platform is based on the Unreal Engine, and seeks to positively 
+influence development and testing of data-driven
+machine intelligence techniques such as reinforcement learning and 
+deep learning. It is inspired by several previous simulators (see 
+related work), and proved to be very useful in this project development.
 
 \section{Description of the framework Architecture}
 
