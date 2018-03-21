@@ -174,6 +174,33 @@ and TensorFlow (with Tensorboard).
 
 \section{Considered Environments}
 
+The following environments were considered under Linux:
+\begin{enumerate}
+    \item Blocks. 
+    \item Cave.
+    \item Landscape Mountains. 
+    \item Corridor. 
+\end{enumerate}
+
+ \includegraphics[scale=0.1]{environments/blocks.png}
+ \includegraphics[scale=0.1]{environments/corridor.jpg}
+ \includegraphics[scale=0.1]{environments/landscape.jpg}
+ \includegraphics[scale=0.1]{environments/cave.png}
+
+The following environments are only available in Windows 
+(therefore no significant experiments were done, but usage is possible).
+
+\begin{enumerate}
+    \item City.
+    \item Africa.
+    \item Jing-Zha.
+    \item Neighborhood.
+\end{enumerate}
+
+\includegraphics[scale=0.1]{environments/city.png}
+\includegraphics[scale=0.1]{environments/neighborhood.png}
+
+
 \section{Agent: Deep Q-learning}
 
 \subsection{General description} 
@@ -210,42 +237,87 @@ $$L(\theta_i) = \mathbb{E}_{s,a,r,s'} \left[ \left(r + \gamma \max_{a'}Q(s', a';
 \subsection{Applied tweaks}
 
 \begin{itemize}
-    \item Experience Replay.
-    \item Freezed network to reduce correlation.
-    \item TD Update 
-    \item Huber Loss
-    \item 4-frame delayed learning
+    \item {\bf Experience Replay.} History was collected, and experience was randomly sampled. That helped to reduce correlation in learning.
+    \item {\bf Freezed network to reduce correlation.} When computing updates, freezed version was used for estimation. This helps 
+        to reduce bang of weights.
+    \item {\bf Huber Loss.} Huber loss is more robust 
+        to outliars than MSE. 
+    \item {\bf 4-frame delayed learning.} 
+        Taking into account several frames helps network to understand 
+        distance, velocity and acceleration better.
 \end{itemize}
 
 \section{Implemented Rewards}
 
 \begin{itemize}
-    \item {\bf Exploration Reward.}
+    \item {\bf Exploration Reward.} Reward is described as $\frac{d - r}{\tau - r}$, where $d$ is distance, $r$ is radius, $\tau$ is constant.
+        Also we penalize going too high.
+    \item {\bf Path Reward.} We force collision avoidance to fixed lines, and penalize going far wary from them.
     \item {\bf Landscape Reward.}
-    \item {\bf Path Reward.}
     \item {\bf Corridor Reward.}
 \end{itemize}
 
 \section{Implemented Action Spaces}
 
 \begin{itemize}
-    \item {\bf Grid Action Space.}
-    \item {\bf Flat Action Space.}
-    \item {\bf Canonical (default) Action Space.}
+    \item {\bf Grid Action Space.} Frontal camera image is separated into $M^2$ parts, which correspond to moving actions. Moving forward is
+        mandatory.
+    \item {\bf Canonical (Default) Action Space.} Forward, Backward, Up, Down, Left, Right, Stay.
+    \item {\bf Flat Action Space.} No up or down, rotations introduced.
     \item {\bf Corridor Action Space.}
 \end{itemize}
 
 \section{Exploration}
 
 \begin{itemize}
-    \item {\bf Constant $\varepsilon$-greedy.}
-    \item {\bf Simulated annealing $\varepsilon$-greedy.}
+    \item {\bf Constant $\varepsilon$-greedy.} Exploration is constant over time, or disabled (for evaluation).
+    \item {\bf Simulated annealing $\varepsilon$-greedy.} Exploration is scheduled by simulated annealing, and essentially decreases with time.
+        Schedule is exponential.
 \end{itemize}
 
 \section{Results}
 
-
 \section{Team Contribution}
+
+The following parts were introduced:
+
+\begin{enumerate}
+    \item {\bf Project Proposal:} Aliaksandr Nekrashevich
+    \item {\bf Architecture:} Aliaksandr Nekrashevich, Aibek Alanov
+    \item {\bf Deep Agent Reproduction:} Aliaksandr Nekrashevich, Aibek Alanov, Dmitriy Salnikov
+    \item {\bf AirSim tweaks:} Aliaksandr Nekrashevich, Dmitriy Salnikov
+    \item {\bf Unreal Engine:} Dmitriy Salnikov, Aibek Alanov
+    \item {\bf Windows Environment Adaptation:} Dmitriy Salnikov, Aibek Alanov
+    \item {\bf Team Management:} Aliaksandr Nekrashevich
+    \item {\bf Rewards:} Aliaksandr Nekrashevich, Aibek Alanov, Dmitriy Salnikov
+    \item {\bf Action Spaces:} Aibek Alanov, Dmitriy Salnikov, Aliaksandr Nekrashevich
+    \item {\bf Exploration Strategies:} Aibek Alanov, Dmitriy Salnikov
+    \item {\bf Report:} Aliaksandr Nekrashevich, Aibek Alanov
+    \item {\bf Presentation:} Aibek Alanov, Dmitriy Salnikov
+\end{enumerate}
+
+This is per-person separation:
+
+\begin{itemize}
+    \item {\bf Aibek Alanov.} Architecture of the framework, Deep Agent reproduction,
+        Adopting Unreal Engine to Linux, Landscape Mountains environemt,
+        Landscape Reward, Flat Action Space, Constant and Annealing exploration, 
+        Report, Presentation.
+
+    \item {\bf Aliaksandr Nekrashevich.} Project proposal, Achitecture of 
+        the framework, Deep Agent reproduction, Blocks Environment, 
+        Corridor Environment, Exploration and Path Rewards, 
+        Grid and Default Action Spaces, Report, Team Management.
+
+    \item {\bf Dmitriy Salnikov.} Deep Agent reproduction, AirSim Tweaks,
+        Unreal Engine on Windows, Environment convertation to Linux,
+        Environment hand-crafting, Corridor Reward, Cave and Corridor 
+        Environments, Windows Environments, Exploration Strategies, 
+        Presentation.
+\end{itemize}
+
+Team emphasises opinion of {\bf equal contribution} to this project from 
+each member.
 
 \bibliographystyle{unsrt}
 \bibliography{reference}
