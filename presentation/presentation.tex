@@ -105,7 +105,7 @@
 
 \usepackage[backend=biber,bibencoding=utf8,sorting=nyt,maxcitenames=2,style=gost-numeric]{biblatex}
 
-\addbibresource{references.bib}
+\addbibresource{reference.bib}
 
 %%%%%%%%%%%%%%%%%%%%
 
@@ -221,10 +221,6 @@
 	\titlepage
 }
 }
-\begin{frame}
-	\frametitle{Contents}
-	\tableofcontents
-\end{frame}
 
 \section{Problem Formulation}
 
@@ -306,7 +302,7 @@ and TensorFlow (with Tensorboard).
         Also we penalize going too high.
     \item {\bf Path Reward.} We force collision avoidance to fixed lines, and penalize going far wary from them.
     \item {\bf Landscape Reward.} The aim is to reach the goal point in the environment. Therefore the reward is the difference $\text{dist}_{\text{prev}} - \text{dist}$ where $\text{dist}_{\text{prev}}$ is the distance to the goal in the previous state and $\text{dist}$ is distance to the goal in the current state.
-    \item {\bf Corridor Reward.}
+    \item {\bf Corridor Reward.} We try to hardly penalize big changes in altitude(Z axis) as well as reward additional discovery via cityblock distance.
 \end{itemize}
 \end{frame}
 
@@ -319,7 +315,7 @@ and TensorFlow (with Tensorboard).
 	        mandatory.
 	    \item {\bf Canonical (Default) Action Space.} Forward, Backward, Up, Down, Left, Right, Stay.
 	    \item {\bf Flat Action Space.} No up or down, rotations introduced.
-	    \item {\bf Corridor Action Space.}
+	    \item {\bf Corridor Action Space.} This action space is just a default with added turns to give quadrotor ability to maneuver through the rather tight corners of the corridor.
 	\end{itemize}
 \end{frame}
 
@@ -371,6 +367,12 @@ and TensorFlow (with Tensorboard).
         Environments, Windows Environments, Exploration Strategies,
         Presentation.
 \end{itemize}
+\end{frame}
+
+\begin{frame}
+	\begin{center}
+		{\huge\alert{Any questions?}}
+	\end{center}
 \end{frame}
 
 \end{document}
