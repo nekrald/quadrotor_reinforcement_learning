@@ -45,7 +45,7 @@ public: //types
     public:
         const SafetyEval::EvalResult result;
 
-        UnsafeMoveException(const SafetyEval::EvalResult result_val, const string message = "")
+        UnsafeMoveException(const SafetyEval::EvalResult result_val, const std::string& message = "")
             : VehicleMoveException(message), result(result_val)
         {}
     };
@@ -102,12 +102,15 @@ public: //interface for outside world
     /// make the drone move forwards, a little bit of roll can make it move sideways.  The yaw control can
     /// make the drone spin around on the spot.  The duration says how long you want to apply these settings
     /// before reverting to a hover command.  So you can say "fly forwards slowly for 1 second" using 
-    /// moveByAngle(0.1, 0, z, yaw, 1, ...).  The cancelable_action can be used to canel all actions.  In fact,
+    /// moveByAngleZ(0.1, 0, z, yaw, 1, ...).  The cancelable_action can be used to canel all actions.  In fact,
     /// every time you call another move* method you will automatically cancel any previous action that is
     /// happening.
-    virtual bool moveByAngle(float pitch, float roll, float z, float yaw, float duration
+    virtual bool moveByAngleZ(float pitch, float roll, float z, float yaw, float duration
         , CancelableBase& cancelable_action);
 
+    /// Move by providing angles and throttles just lik ein RC
+    virtual bool moveByAngleThrottle(float pitch, float roll, float throttle, float yaw_rate, float duration
+        , CancelableBase& cancelable_action);
 
     /// Move the drone by controlling the velocity vector of the drone. A little bit of vx can
     /// make the drone move forwards, a little bit of vy can make it move sideways.  A bit of vz can move
@@ -170,37 +173,37 @@ public: //interface for outside world
     virtual bool hover(CancelableBase& cancelable_action);
 
     /// get state from estimator
-    virtual Kinematics::State getKinematicsEstimated() = 0;
+    virtual Kinematics::State getKinematicsEstimated() const = 0;
     
     /// get the current local position in NED coordinate (x=North/y=East,z=Down) so z is negative.
-    virtual Vector3r getPosition() = 0;
+    virtual Vector3r getPosition() const = 0;
 
 
     /// Get the current velocity of the drone
-    virtual Vector3r getVelocity() = 0;
+    virtual Vector3r getVelocity() const = 0;
 
     /// Get the current orientation (or attitude) of the drone as a Quaternion.
-    virtual Quaternionr getOrientation() = 0;
+    virtual Quaternionr getOrientation() const = 0;
 
     /// Get debug pose, meaning of which is dependent on application usage. For example,
     /// this could be pose of real vehicle from log playback.
-    virtual Pose getDebugPose();
+    virtual Pose getDebugPose() const;
 
     /// get the current X and Y position
-    Vector2r getPositionXY();
+    Vector2r getPositionXY() const;
 
     /// Get the Z position (z starts at zero on the ground, and becomes more and more negative as you go up)
-    float getZ();
+    float getZ() const;
 
     /// Get current state of the drone, is it landed or in the air
-    virtual LandedState getLandedState() = 0;
+    virtual LandedState getLandedState() const = 0;
 
     /// Assigned remote control to use for this controller, 
     /// -1 = onboard RC, 0+ = joystick ID available on OS
-    virtual int getRemoteControlID() { return -1; }
+    virtual int getRemoteControlID() const { return -1; }
 
     /// Get the current RC inputs when RC transmitter is talking to to flight controller
-    virtual RCData getRCData() = 0;
+    virtual RCData getRCData() const = 0;
 
     virtual RCData estimateRCTrims(CancelableBase& cancelable_action, float trimduration = 1, float minCountForTrim = 10, float maxTrim = 100);
 
@@ -209,22 +212,22 @@ public: //interface for outside world
 
     /// Get the home point (where drone was armed before takeoff).  This is the location the drone 
     /// will return to if you call goHome().
-    virtual GeoPoint getHomeGeoPoint() = 0;
+    virtual GeoPoint getHomeGeoPoint() const = 0;
 
     /// Get the current GPS location of the drone.
-    virtual GeoPoint getGpsLocation() = 0;
+    virtual GeoPoint getGpsLocation() const = 0;
 
     //below are for passing information from simulator to API layer
     //in non simulation mode default would be no collision unless
     //controller implements otherwise.
-    virtual CollisionInfo getCollisionInfo();
+    virtual CollisionInfo getCollisionInfo() const;
     virtual void setCollisionInfo(const CollisionInfo& collision_info);
 
     //safety settings
     virtual void setSafetyEval(const shared_ptr<SafetyEval> safety_eval_ptr);
     virtual bool setSafety(SafetyEval::SafetyViolationType enable_reasons, float obs_clearance, SafetyEval::ObsAvoidanceStrategy obs_startegy,
         float obs_avoidance_vel, const Vector3r& origin, float xy_length, float max_z, float min_z);
-    virtual const VehicleParams& getVehicleParams() = 0;
+    virtual const VehicleParams& getVehicleParams() const = 0;
 
     //*********************************common pre & post for move commands***************************************************
     //TODO: make these protected
@@ -240,21 +243,22 @@ protected: //must implement interface by derived class
     //all angles in degrees, lengths in meters, velocities in m/s, durations in seconds
     //all coordinates systems are world NED (+x is North, +y is East, +z is down)
     virtual void commandRollPitchZ(float pitch, float roll, float z, float yaw) = 0;
+    virtual void commandRollPitchThrottle(float pitch, float roll, float throttle, float yaw_rate) = 0;
     virtual void commandVelocity(float vx, float vy, float vz, const YawMode& yaw_mode) = 0;
     virtual void commandVelocityZ(float vx, float vy, float z, const YawMode& yaw_mode) = 0;
     virtual void commandPosition(float x, float y, float z, const YawMode& yaw_mode) = 0;
 
     //config commands
-    virtual float getCommandPeriod() = 0; //time between two command required for drone in seconds
-    virtual float getTakeoffZ() = 0;  // the height above ground for the drone after successful takeoff (Z above ground is negative due to NED coordinate system).
+    virtual float getCommandPeriod() const = 0; //time between two command required for drone in seconds
+    virtual float getTakeoffZ() const = 0;  // the height above ground for the drone after successful takeoff (Z above ground is negative due to NED coordinate system).
                                       //noise in difference of two position coordinates. This is not GPS or position accuracy which can be very low such as 1m.
                                       //the difference between two position cancels out transitional errors. Typically this would be 0.1m or lower.
-    virtual float getDistanceAccuracy() = 0; 
+    virtual float getDistanceAccuracy() const = 0; 
 
 protected: //optional oveerides recommanded for any drones, default implementation may work
     virtual float getAutoLookahead(float velocity, float adaptive_lookahead,
-        float max_factor = 40, float min_factor = 30);
-    virtual float getObsAvoidanceVelocity(float risk_dist, float max_obs_avoidance_vel);
+        float max_factor = 40, float min_factor = 30) const;
+    virtual float getObsAvoidanceVelocity(float risk_dist, float max_obs_avoidance_vel) const;
 
 protected: //utility functions and data members for derived classes
     typedef std::function<bool()> WaitFunction;
@@ -272,6 +276,7 @@ protected: //utility functions and data members for derived classes
     virtual bool moveByVelocityZ(float vx, float vy, float z, const YawMode& yaw_mode);
     virtual bool moveToPosition(const Vector3r& dest, const YawMode& yaw_mode);
     virtual bool moveByRollPitchZ(float pitch, float roll, float z, float yaw);
+    virtual bool moveByRollPitchThrottle(float pitch, float roll, float throttle, float yaw_rate);
     //****************************************************************************************************************************
 
     /************* safety checks & emergency manuevers ************/
@@ -340,7 +345,7 @@ private: //methods
 
     void moveToPathPosition(const Vector3r& dest, float velocity, DrivetrainType drivetrain, /* pass by value */ YawMode yaw_mode, float last_z);
 
-    bool isYawWithinMargin(float yaw_target, float margin);
+    bool isYawWithinMargin(float yaw_target, float margin) const;
 
 private:// vars
     shared_ptr<SafetyEval> safety_eval_ptr_;

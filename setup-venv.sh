@@ -19,11 +19,13 @@ python3 setup.py build
 python3 setup.py install
 cd ../..
 
-cd libraries/baseline
+cd libraries/baselines
 pip3 install -e .
 cd ../..
 
 pip3 install tensorforce[tf]
 pip3 install keras-rl h5py
+
+pip3 install matplotlib
 
 deactivate

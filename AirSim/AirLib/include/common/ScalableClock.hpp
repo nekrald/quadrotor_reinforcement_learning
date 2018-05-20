@@ -17,6 +17,8 @@ public:
         : scale_(scale), latency_(latency)
     {
         offset_ = latency * (scale_ - 1);
+        start_ = nowNanos();
+
         unused(latency_);
     }
 
@@ -34,6 +36,11 @@ public:
             */
             return static_cast<TTimePoint>((Utils::getTimeSinceEpochNanos() + offset_) / scale_);
         }
+    }
+
+    virtual TTimePoint getStart() const override
+    {
+        return start_;
     }
 
     virtual void sleep_for(TTimeDelta dt) override
@@ -66,11 +73,11 @@ protected:
 
 
 private:
-    typedef std::chrono::high_resolution_clock clock;
-
     double scale_;
     TTimeDelta latency_;
     double offset_;
+    TTimePoint start_;
+
 };
 
 }} //namespace

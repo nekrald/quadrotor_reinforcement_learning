@@ -1,11 +1,14 @@
 #include "SimHUD.h"
 #include "ConstructorHelpers.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Misc/FileHelper.h"
+
 #include "Multirotor/SimModeWorldMultiRotor.h"
 #include "Car/SimModeCar.h"
 #include "common/AirSimSettings.hpp"
-#include "Kismet/KismetSystemLibrary.h"
-
+#include "api/DebugApiServer.hpp"
 #include <stdexcept>
+
 
 ASimHUD* ASimHUD::instance_ = nullptr;
 
@@ -21,11 +24,13 @@ void ASimHUD::BeginPlay()
     Super::BeginPlay();
 
     try {
+        UAirBlueprintLib::OnBeginPlay();
         initializeSettings();
         setUnrealEngineSettings();
         createSimMode();
         createMainWidget();
         setupInputBindings();
+        startApiServer();
     }
     catch (std::exception& ex) {
         UAirBlueprintLib::LogMessageString("Error at startup: ", ex.what(), LogDebugLevel::Failure);
@@ -43,6 +48,8 @@ void ASimHUD::Tick(float DeltaSeconds)
 
 void ASimHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    stopApiServer();
+
     if (widget_) {
         widget_->Destruct();
         widget_ = nullptr;
@@ -51,6 +58,8 @@ void ASimHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
         simmode_->Destroy();
         simmode_ = nullptr;
     }
+
+    UAirBlueprintLib::OnEndPlay();
 
     Super::EndPlay(EndPlayReason);
 }
@@ -69,6 +78,40 @@ void ASimHUD::inputEventToggleReport()
 {
     simmode_->EnableReport = !simmode_->EnableReport;
     widget_->setReportVisible(simmode_->EnableReport);
+}
+
+void ASimHUD::startApiServer()
+{
+    if (AirSimSettings::singleton().enable_rpc) {
+
+#ifdef AIRLIB_NO_RPC
+        api_server_.reset(new msr::airlib::DebugApiServer());
+#else
+        api_server_ = simmode_->createApiServer();
+#endif
+
+        try {
+            api_server_->start();
+        }
+        catch (std::exception& ex) {
+            UAirBlueprintLib::LogMessageString("Cannot start RpcLib Server", ex.what(), LogDebugLevel::Failure);
+        }
+    }
+    else
+        UAirBlueprintLib::LogMessageString("API server is disabled in settings", "", LogDebugLevel::Informational);
+
+}
+void ASimHUD::stopApiServer()
+{
+    if (api_server_ != nullptr) {
+        api_server_->stop();
+        api_server_.reset(nullptr);
+    }
+}
+
+bool ASimHUD::isApiServerStarted()
+{
+    return api_server_ != nullptr;
 }
 
 void ASimHUD::inputEventToggleHelp()
@@ -204,7 +247,6 @@ void ASimHUD::setUnrealEngineSettings()
     //we get error that GameThread has timed out after 30 sec waiting on render thread
     static const auto render_timeout_var = IConsoleManager::Get().FindConsoleVariable(TEXT("g.TimeoutForBlockOnRenderFence"));
     render_timeout_var->Set(300000);
-
 }
 
 void ASimHUD::setupInputBindings()

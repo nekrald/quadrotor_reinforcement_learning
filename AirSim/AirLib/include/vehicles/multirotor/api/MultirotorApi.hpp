@@ -18,7 +18,7 @@ using namespace msr::airlib;
 
 namespace msr { namespace airlib {
 
-// We want to make it possible for MultirotorRpcLibClient to call the offboard movement methods (moveByAngle, moveByVelocity, etc) at a high
+// We want to make it possible for MultirotorRpcLibClient to call the offboard movement methods (moveByAngleZ, moveByVelocity, etc) at a high
 // rate, like 30 times a second.  But we also want these movement methods to drive the drone at a reliable rate which we do inside
 // DroneControllerBase using the Waiter object so it pumps the virtual commandVelocity method at a fixed rate defined by getCommandPeriod.
 // This fixed rate is needed by the drone flight controller (for example PX4) because the flight controller usually reverts to
@@ -44,7 +44,7 @@ public:
     }
     virtual ~MultirotorApi() = default;
 
-    bool armDisarm(bool arm)
+    virtual bool armDisarm(bool arm) override
     {
         CallLock lock(controller_, action_mutex_, cancel_mutex_, pending_);
         pending_ = std::make_shared<DirectCancelableBase>();
@@ -83,9 +83,15 @@ public:
         return controller_->goHome(*pending_);
     }
 
-    bool moveByAngle(float pitch, float roll, float z, float yaw, float duration)
+    bool moveByAngleZ(float pitch, float roll, float z, float yaw, float duration)
     {
-        std::shared_ptr<OffboardCommand> cmd = std::make_shared<MoveByAngle>(controller_, pitch, roll, z, yaw, duration);
+        std::shared_ptr<OffboardCommand> cmd = std::make_shared<MoveByAngleZ>(controller_, pitch, roll, z, yaw, duration);
+        return enqueueCommand(cmd);
+    }
+
+    bool moveByAngleThrottle(float pitch, float roll, float throttle, float yaw_rate, float duration)
+    {
+        std::shared_ptr<OffboardCommand> cmd = std::make_shared<MoveByAngleThrottle>(controller_, pitch, roll, throttle, yaw_rate, duration);
         return enqueueCommand(cmd);
     }
 
@@ -157,7 +163,7 @@ public:
     }
 
     /************************* State APIs *********************************/
-    MultirotorState getMultirotorState()
+    MultirotorState getMultirotorState() const
     {
         MultirotorState state;
         state.kinematics_estimated = controller_->getKinematicsEstimated();
@@ -169,44 +175,44 @@ public:
         return state;
     }
 
-    Vector3r getPosition()
+    Vector3r getPosition() const
     {
         return controller_->getPosition();
     }
 
-    Vector3r getVelocity()
+    Vector3r getVelocity() const
     {
         return controller_->getVelocity();
     }
 
-    Quaternionr getOrientation()
+    Quaternionr getOrientation() const
     {
         return controller_->getOrientation();
     }
 
-    DroneControllerBase::LandedState getLandedState()
+    DroneControllerBase::LandedState getLandedState() const
     {
         return controller_->getLandedState();
     }
 
-    virtual CollisionInfo getCollisionInfo() override
+    virtual CollisionInfo getCollisionInfo() const override
     {
         return controller_->getCollisionInfo();
     }
 
-    RCData getRCData()
+    RCData getRCData() const
     {
         return controller_->getRCData();
     }
 
 
     //TODO: add GPS health, accuracy in API
-    GeoPoint getGpsLocation()
+    GeoPoint getGpsLocation() const
     {
         return controller_->getGpsLocation();
     }
 
-    bool isSimulationMode()
+    bool isSimulationMode() const
     {
         return controller_->isSimulationMode();
     }
@@ -223,7 +229,7 @@ public:
 
 
     /******************* VehicleApiBase implementtaion ********************/
-    virtual GeoPoint getHomeGeoPoint() override
+    virtual GeoPoint getHomeGeoPoint() const override
     {
         return controller_->getHomeGeoPoint();
     }
@@ -234,14 +240,14 @@ public:
         controller_->enableApiControl(is_enabled);
     }
 
-    virtual vector<ImageCaptureBase::ImageResponse> simGetImages(const vector<ImageCaptureBase::ImageRequest>& requests) override
+    virtual vector<ImageCaptureBase::ImageResponse> simGetImages(const vector<ImageCaptureBase::ImageRequest>& requests) const override
     {
         vector<ImageCaptureBase::ImageResponse> responses;
         ImageCaptureBase* image_capture = vehicle_->getImageCapture();
         image_capture->getImages(requests, responses);
         return responses;
     }
-    virtual vector<uint8_t> simGetImage(uint8_t camera_id, ImageCaptureBase::ImageType image_type) override
+    virtual vector<uint8_t> simGetImage(uint8_t camera_id, ImageCaptureBase::ImageType image_type) const override
     {
         vector<ImageCaptureBase::ImageRequest> request = { ImageCaptureBase::ImageRequest(camera_id, image_type)};
         const vector<ImageCaptureBase::ImageResponse>& response = simGetImages(request);
@@ -256,7 +262,7 @@ public:
         vehicle_->printLogMessage(message, message_param, severity);
     }
 
-    virtual Pose simGetObjectPose(const std::string& actor_name) override
+    virtual Pose simGetObjectPose(const std::string& actor_name) const override
     {
         return vehicle_->getActorPose(actor_name);
     }
@@ -265,7 +271,7 @@ public:
     {
         vehicle_->setPose(pose, ignore_collision);
     }
-    virtual Pose simGetPose() override
+    virtual Pose simGetPose() const override
     {
         return vehicle_->getPose();
     }
@@ -276,7 +282,7 @@ public:
         return vehicle_->setSegmentationObjectID(mesh_name, object_id, is_name_regex);
     }
 
-    virtual int simGetSegmentationObjectID(const std::string& mesh_name) override
+    virtual int simGetSegmentationObjectID(const std::string& mesh_name) const override
     {
         return vehicle_->getSegmentationObjectID(mesh_name);
     }
@@ -384,10 +390,25 @@ private:// types
         return true;
     }
 
-    class MoveByAngle : public OffboardCommand {
+    class MoveByAngleThrottle : public OffboardCommand {
+        float pitch_, roll_, throttle_, yaw_rate_, duration_;
+    public:
+        MoveByAngleThrottle(DroneControllerBase* controller, float pitch, float roll, float throttle, float yaw_rate, float duration) : OffboardCommand(controller) {
+            this->pitch_ = pitch;
+            this->roll_ = roll;
+            this->throttle_ = throttle;
+            this->yaw_rate_ = yaw_rate;
+            this->duration_ = duration;
+        }
+        virtual void executeImpl(DroneControllerBase* controller, CancelableBase& cancelable) override {
+            controller->moveByAngleThrottle (pitch_, roll_, throttle_, yaw_rate_, duration_, cancelable);
+        }
+    };
+
+    class MoveByAngleZ : public OffboardCommand {
         float pitch_, roll_, z_, yaw_, duration_;
     public:
-        MoveByAngle(DroneControllerBase* controller, float pitch, float roll, float z, float yaw, float duration) : OffboardCommand(controller) {
+        MoveByAngleZ(DroneControllerBase* controller, float pitch, float roll, float z, float yaw, float duration) : OffboardCommand(controller) {
             this->pitch_ = pitch;
             this->roll_ = roll;
             this->z_ = z;
@@ -395,7 +416,7 @@ private:// types
             this->duration_ = duration;
         }
         virtual void executeImpl(DroneControllerBase* controller, CancelableBase& cancelable) override {
-            controller->moveByAngle(pitch_, roll_, z_, yaw_, duration_, cancelable);
+            controller->moveByAngleZ(pitch_, roll_, z_, yaw_, duration_, cancelable);
         }
     };
 
@@ -455,6 +476,7 @@ private:// types
         virtual void executeImpl(DroneControllerBase* controller, CancelableBase& cancelable) override {
             controller->moveOnPath(path_, velocity_, drivetrain_, yaw_mode_, lookahead_, adaptive_lookahead_, cancelable);
         }
+        virtual ~MoveOnPath() = default;
     };
 
 

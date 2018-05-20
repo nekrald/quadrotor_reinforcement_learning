@@ -7,6 +7,7 @@
 #include "common/ClockFactory.hpp"
 #include "common/AirSimSettings.hpp"
 #include "NedTransform.h"
+#include "common/EarthUtils.hpp"
 
 VehiclePawnWrapper::VehiclePawnWrapper()
 {
@@ -44,10 +45,10 @@ void VehiclePawnWrapper::onCollision(class UPrimitiveComponent* MyComp, class AA
     UPrimitiveComponent* comp = Cast<class UPrimitiveComponent>(Other ? (Other->GetRootComponent() ? Other->GetRootComponent() : nullptr) : nullptr);
 
     state_.collision_info.has_collided = true;
-    state_.collision_info.normal = NedTransform::toVector3r(Hit.ImpactNormal, 1, true);
-    state_.collision_info.impact_point = NedTransform::toNedMeters(Hit.ImpactPoint);
-    state_.collision_info.position = NedTransform::toNedMeters(getPosition());
-    state_.collision_info.penetration_depth = NedTransform::toNedMeters(Hit.PenetrationDepth);
+    state_.collision_info.normal = Vector3r(Hit.ImpactNormal.X, Hit.ImpactNormal.Y, - Hit.ImpactNormal.Z);
+    state_.collision_info.impact_point = ned_transform_.toNedMeters(Hit.ImpactPoint);
+    state_.collision_info.position = ned_transform_.toNedMeters(getUUPosition());
+    state_.collision_info.penetration_depth = ned_transform_.toNedMeters(Hit.PenetrationDepth);
     state_.collision_info.time_stamp = msr::airlib::ClockFactory::get()->nowNanos();
     state_.collision_info.object_name = std::string(Other ? TCHAR_TO_UTF8(*(Other->GetName())) : "(null)");
     state_.collision_info.object_id = comp ? comp->CustomDepthStencilValue : -1;
@@ -59,6 +60,18 @@ void VehiclePawnWrapper::onCollision(class UPrimitiveComponent* MyComp, class AA
         state_.collision_info.collision_count, 
         state_.collision_info.object_name.c_str(), state_.collision_info.object_id),
         LogDebugLevel::Failure);
+}
+
+void VehiclePawnWrapper::possess()
+{
+    APlayerController* controller = pawn_->GetWorld()->GetFirstPlayerController();
+    controller->UnPossess();
+    controller->Possess(pawn_);
+}
+
+const NedTransform& VehiclePawnWrapper::getNedTransform() const
+{
+    return ned_transform_;
 }
 
 APawn* VehiclePawnWrapper::getPawn()
@@ -82,6 +95,27 @@ const msr::airlib::Kinematics::State* VehiclePawnWrapper::getTrueKinematics()
 void VehiclePawnWrapper::setKinematics(const msr::airlib::Kinematics::State* kinematics)
 {
     kinematics_ = kinematics;
+}
+
+msr::airlib::VehicleApiBase* VehiclePawnWrapper::getApi() const
+{
+    return api_.get();
+}
+
+void VehiclePawnWrapper::setApi(std::unique_ptr<msr::airlib::VehicleApiBase> api)
+{
+    api_ = std::move(api);
+}
+
+void VehiclePawnWrapper::getRawVehicleSettings(msr::airlib::Settings& settings) const
+{
+    typedef msr::airlib::AirSimSettings AirSimSettings;
+
+    //find out which RC we should use
+    AirSimSettings::VehicleSettings vehicle_settings =
+        AirSimSettings::singleton().getVehicleSettings(this->getVehicleConfigName());
+
+    vehicle_settings.getRawSettings(settings);
 }
 
 std::string VehiclePawnWrapper::getVehicleConfigName() const 
@@ -108,17 +142,15 @@ int VehiclePawnWrapper::getRemoteControlID() const
 
 void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras, const WrapperConfig& config)
 {
+    typedef msr::airlib::AirSimSettings AirSimSettings;
+
     pawn_ = pawn;
     cameras_ = cameras;
     config_ = config;
 
     image_capture_.reset(new UnrealImageCapture(cameras_));
 
-    if (!NedTransform::isInitialized())
-        NedTransform::initialize(pawn_);
-
-    //set up key variables
-    home_point_ = msr::airlib::GeoPoint(config.home_lattitude, config.home_longitude, config.home_altitude);
+    ned_transform_.initialize(pawn);
 
     //initialize state
     pawn_->GetActorBounds(true, initial_state_.mesh_origin, initial_state_.mesh_bounds);
@@ -127,10 +159,14 @@ void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>&
     ground_margin_ = FVector(0, 0, 20); //TODO: can we explain pawn_ experimental setting? 7 seems to be minimum
     ground_trace_end_ = initial_state_.ground_offset + ground_margin_; 
 
-    initial_state_.start_location = getPosition();
+    initial_state_.start_location = getUUPosition();
     initial_state_.last_position = initial_state_.start_location;
     initial_state_.last_debug_position = initial_state_.start_location;
-    initial_state_.start_rotation = getOrientation();
+    initial_state_.start_rotation = getUUOrientation();
+
+    //compute our home point
+    Vector3r nedWrtOrigin = ned_transform_.toNedMeters(getUUPosition(), false);
+    home_point_ = msr::airlib::EarthUtils::nedToGeodetic(nedWrtOrigin, AirSimSettings::singleton().origin_geopoint);
 
     initial_state_.tracing_enabled = config.enable_trace;
     initial_state_.collisions_enabled = config.enable_collisions;
@@ -181,13 +217,16 @@ int VehiclePawnWrapper::getCameraCount()
 void VehiclePawnWrapper::reset()
 {
     state_ = initial_state_;
+    pawn_->SetActorLocationAndRotation(state_.start_location, state_.start_rotation, false, nullptr, ETeleportType::TeleportPhysics);
+}
+
+//void playBack()
+//{
     //if (pawn_->GetRootPrimitiveComponent()->IsAnySimulatingPhysics()) {
     //    pawn_->GetRootPrimitiveComponent()->SetSimulatePhysics(false);
     //    pawn_->GetRootPrimitiveComponent()->SetSimulatePhysics(true);
     //}
-    pawn_->SetActorLocationAndRotation(state_.start_location, state_.start_rotation, false, nullptr, ETeleportType::TeleportPhysics);
-
-    //TODO: delete below
+    //TODO: refactor below code used for playback
     //std::ifstream sim_log("C:\\temp\\mavlogs\\circle\\sim_cmd_006_orbit 5 1.txt.pos.txt");
     //plot(sim_log, FColor::Purple, Vector3r(0, 0, -3));
     //std::ifstream real_log("C:\\temp\\mavlogs\\circle\\real_cmd_006_orbit 5 1.txt.pos.txt");
@@ -197,7 +236,7 @@ void VehiclePawnWrapper::reset()
     //plot(sim_log, FColor::Purple, Vector3r(0, 0, -3));
     //std::ifstream real_log("C:\\temp\\mavlogs\\square\\real_cmd_012_square 5 1.txt.pos.txt");
     //plot(real_log, FColor::Yellow, Vector3r(0, 0, -3));
-}
+//}
 
 const VehiclePawnWrapper::GeoPoint& VehiclePawnWrapper::getHomePoint() const
 {
@@ -209,12 +248,12 @@ const VehiclePawnWrapper::CollisionInfo& VehiclePawnWrapper::getCollisionInfo() 
     return state_.collision_info;
 }
 
-FVector VehiclePawnWrapper::getPosition() const
+FVector VehiclePawnWrapper::getUUPosition() const
 {
     return pawn_->GetActorLocation(); // - state_.mesh_origin
 }
 
-FRotator VehiclePawnWrapper::getOrientation() const
+FRotator VehiclePawnWrapper::getUUOrientation() const
 {
     return pawn_->GetActorRotation();
 }
@@ -252,7 +291,7 @@ void VehiclePawnWrapper::plot(std::istream& s, FColor color, const Vector3r& off
         Vector3r current_point(x, y, z);
         current_point += offset;
         if (!VectorMath::hasNan(last_point)) {
-            UKismetSystemLibrary::DrawDebugLine(pawn_->GetWorld(), NedTransform::toNeuUU(last_point), NedTransform::toNeuUU(current_point), color, 0, 3.0F);
+            UKismetSystemLibrary::DrawDebugLine(pawn_->GetWorld(), ned_transform_.toNeuUU(last_point), ned_transform_.toNeuUU(current_point), color, 0, 3.0F);
         }
         last_point = current_point;
     }
@@ -269,8 +308,8 @@ msr::airlib::CameraInfo VehiclePawnWrapper::getCameraInfo(int camera_id) const
     msr::airlib::CameraInfo camera_info;
 
     const APIPCamera* camera = getCamera(camera_id);
-    camera_info.pose.position = NedTransform::toNedMeters(camera->GetActorLocation(), true);
-    camera_info.pose.orientation = NedTransform::toQuaternionr(camera->GetActorRotation().Quaternion(), true);
+    camera_info.pose.position = ned_transform_.toNedMeters(camera->GetActorLocation(), true);
+    camera_info.pose.orientation = ned_transform_.toQuaternionr(camera->GetActorRotation().Quaternion(), true);
     camera_info.fov = camera->GetCameraComponent()->FieldOfView;
     return camera_info;
 }
@@ -278,31 +317,31 @@ msr::airlib::CameraInfo VehiclePawnWrapper::getCameraInfo(int camera_id) const
 void VehiclePawnWrapper::setCameraOrientation(int camera_id, const msr::airlib::Quaternionr& orientation)
 {
     APIPCamera* camera = getCamera(camera_id);
-    FQuat quat = NedTransform::toFQuat(orientation, true);
+    FQuat quat = ned_transform_.toFQuat(orientation, true);
     camera->SetActorRelativeRotation(quat);
 }
 
 //parameters in NED frame
 VehiclePawnWrapper::Pose VehiclePawnWrapper::getPose() const
 {
-    return toPose(getPosition(), pawn_->GetActorRotation().Quaternion());
+    return toPose(getUUPosition(), getUUOrientation().Quaternion());
 }
 
-VehiclePawnWrapper::Pose VehiclePawnWrapper::toPose(const FVector& u_position, const FQuat& u_quat)
+VehiclePawnWrapper::Pose VehiclePawnWrapper::toPose(const FVector& u_position, const FQuat& u_quat) const
 {
-    const Vector3r& position = NedTransform::toNedMeters(u_position);
-    const Quaternionr& orientation = NedTransform::toQuaternionr(u_quat, true);
+    const Vector3r& position = ned_transform_.toNedMeters(u_position);
+    const Quaternionr& orientation = ned_transform_.toQuaternionr(u_quat, true);
     return Pose(position, orientation);
 }
 
 void VehiclePawnWrapper::setPose(const Pose& pose, bool ignore_collision)
 {
     //translate to new VehiclePawnWrapper position & orientation from NED to NEU
-    FVector position = NedTransform::toNeuUU(pose.position);
+    FVector position = ned_transform_.toNeuUU(pose.position);
     state_.current_position = position;
 
     //quaternion formula comes from http://stackoverflow.com/a/40334755/207661
-    FQuat orientation = NedTransform::toFQuat(pose.orientation, true);
+    FQuat orientation = ned_transform_.toFQuat(pose.orientation, true);
 
     bool enable_teleport = ignore_collision || canTeleportWhileMove();
 
@@ -328,7 +367,7 @@ void VehiclePawnWrapper::setPose(const Pose& pose, bool ignore_collision)
 
 void VehiclePawnWrapper::setDebugPose(const Pose& debug_pose)
 {
-    state_.current_debug_position = NedTransform::toNeuUU(debug_pose.position);
+    state_.current_debug_position = ned_transform_.toNeuUU(debug_pose.position);
     if (state_.tracing_enabled && !VectorMath::hasNan(debug_pose.position)) {
         FVector debug_position = state_.current_debug_position - state_.debug_position_offset;
         if ((state_.last_debug_position - debug_position).SizeSquared() > 0.25) {

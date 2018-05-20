@@ -470,9 +470,13 @@ public:
         return system_clock::now();
     }
 
-    static string to_string(time_point<system_clock> time)
+    static std::time_t to_time_t(const std::string& str, bool is_dst = false, const std::string& format = "%Y-%m-%d %H:%M:%S")
     {
-        return to_string(time, "%Y-%m-%d-%H-%M-%S");
+        std::tm t;
+        t.tm_isdst = is_dst ? 1 : 0;
+        std::istringstream ss(str);
+        ss >> std::get_time(&t, format.c_str());
+        return mktime(&t);
 
         /* GCC doesn't implement put_time yet
         stringstream ss;
@@ -481,7 +485,15 @@ public:
         */
     }
 
-    static string to_string(time_point<system_clock> time, const char* format)
+    static string to_string(time_t tt, const char* format = "%Y-%m-%d-%H-%M-%S")
+    {
+        char str[1024];
+        if (std::strftime(str, sizeof(str), format, std::localtime(&tt)))
+            return string(str);
+        else return string();
+    }
+
+    static string to_string(time_point<system_clock> time, const char* format = "%Y-%m-%d-%H-%M-%S")
     {
         time_t tt = system_clock::to_time_t(time);
         char str[1024];
@@ -503,22 +515,27 @@ public:
         return ptr ? ptr : "";
     }
 
-    static uint64_t getUnixTimeStamp(std::time_t* t = nullptr)
+    static uint64_t getUnixTimeStamp(const std::time_t* t = nullptr)
     {
-        std::time_t st = std::time(t);
-        auto millies = static_cast<std::chrono::milliseconds>(st).count();
-        return static_cast<uint64_t>(millies);
+        //if specific time is not passed then get current time
+        std::time_t st = t == nullptr ? std::time(nullptr) : *t;
+        auto secs = static_cast<std::chrono::seconds>(st).count();
+        return static_cast<uint64_t>(secs);
     }
+
     //high precision time in seconds since epoch
-    static double getTimeSinceEpochSecs(std::chrono::high_resolution_clock::time_point* t = nullptr)
+    static double getTimeSinceEpochSecs(std::chrono::system_clock::time_point* t = nullptr)
     {
-        using Clock = std::chrono::high_resolution_clock;
+        using Clock = std::chrono::system_clock; //high res clock has epoch since boot instead of since 1970 for VC++
         return std::chrono::duration<double>((t != nullptr ? *t : Clock::now() ).time_since_epoch()).count();
     }
-    static uint64_t getTimeSinceEpochNanos(std::chrono::high_resolution_clock::time_point* t = nullptr)
+    static uint64_t getTimeSinceEpochNanos(std::chrono::system_clock::time_point* t = nullptr)
     {
-        using Clock = std::chrono::high_resolution_clock;
-        return static_cast<uint64_t>((t != nullptr ? *t : Clock::now() ).time_since_epoch().count());
+        using Clock = std::chrono::system_clock; //high res clock has epoch since boot instead of since 1970 for VC++
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(
+            (t != nullptr ? *t : Clock::now())
+                .time_since_epoch()).
+            count();  
     }
 
     template<typename T>

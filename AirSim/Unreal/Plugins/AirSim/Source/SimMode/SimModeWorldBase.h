@@ -8,7 +8,7 @@
 #include "physics/World.hpp"
 #include "physics/PhysicsWorld.hpp"
 #include "common/StateReporterWrapper.hpp"
-#include "api/ControlServerBase.hpp"
+#include "api/ApiServerBase.hpp"
 #include "SimModeBase.h"
 #include "SimModeWorldBase.generated.h"
 
@@ -28,12 +28,15 @@ public:
     virtual void reset() override;
     virtual std::string getReport() override;
 
+    virtual bool isPaused() const override;
+    virtual void pause(bool is_paused) override;
+    virtual void continueForTime(double seconds) override;
+
 protected:
     typedef std::shared_ptr<msr::airlib::VehicleConnectorBase> VehiclePtr;
     virtual void createVehicles(std::vector<VehiclePtr>& vehicles);
     size_t getVehicleCount() const;
 
-    static const char kUsageScenarioComputerVision[];
     UPROPERTY() UManualPoseController* manual_pose_controller;
 
     void startAsyncUpdator();
@@ -42,11 +45,10 @@ protected:
 private:
     typedef msr::airlib::UpdatableObject UpdatableObject;
     typedef msr::airlib::PhysicsEngineBase PhysicsEngineBase;
+    typedef msr::airlib::ClockFactory ClockFactory;
 
     PhysicsEngineBase* createPhysicsEngine();
     static std::vector<UpdatableObject*> toUpdatableObjects(const std::vector<VehiclePtr>& vehicles);
-    long long getPhysicsLoopPeriod();
-    void setupClock();
 
 private:
     std::unique_ptr<msr::airlib::PhysicsWorld> physics_world_;

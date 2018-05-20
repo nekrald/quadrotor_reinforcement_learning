@@ -34,7 +34,7 @@ void ACameraDirector::Tick(float DeltaTime)
     else if (mode_ == ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE) {
         //do nothing, spring arm is pulling the camera with it
     }
-    else if (mode_ == ECameraDirectorMode::CAMREA_DIRECTOR_MODE_NODISPLAY) {
+    else if (mode_ == ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY) {
         //do nothing, we have camera turned off
     }
     else { //make camera move in desired way
@@ -78,6 +78,7 @@ void ACameraDirector::setCameras(APIPCamera* external_camera, VehiclePawnWrapper
     external_camera_ = external_camera;
     follow_actor_ = vehicle_pawn_wrapper->getPawn();
     fpv_camera_ = vehicle_pawn_wrapper->getCameraCount() > fpv_camera_index_ ? vehicle_pawn_wrapper->getCamera(fpv_camera_index_) : nullptr;
+    front_camera_ = vehicle_pawn_wrapper->getCameraCount() > front_camera_index_ ? vehicle_pawn_wrapper->getCamera(front_camera_index_) : nullptr;
     backup_camera_ = backup_camera_index_ >= 0 && vehicle_pawn_wrapper->getCameraCount() > backup_camera_index_ ? vehicle_pawn_wrapper->getCamera(backup_camera_index_) : nullptr;
     camera_start_location_ = external_camera_->GetActorLocation();
     camera_start_rotation_ = external_camera_->GetActorRotation();
@@ -92,8 +93,9 @@ void ACameraDirector::setCameras(APIPCamera* external_camera, VehiclePawnWrapper
     case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_GROUND_OBSERVER: inputEventGroundView(); break;
     case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL: inputEventManualView(); break;
     case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE: inputEventSpringArmChaseView(); break;
-    case ECameraDirectorMode::CAMREA_DIRECTOR_MODE_BACKUP: inputEventBackupView(); break;
-    case ECameraDirectorMode::CAMREA_DIRECTOR_MODE_NODISPLAY: inputEventNoDisplayView(); break;
+    case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_BACKUP: inputEventBackupView(); break;
+    case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY: inputEventNoDisplayView(); break;
+    case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FRONT: inputEventFrontView(); break;
     default:
         throw std::out_of_range("Unsupported view mode specified in CameraDirector::initializeForBeginPlay");
     }
@@ -139,26 +141,53 @@ void ACameraDirector::attachSpringArm(bool attach)
 
 void ACameraDirector::setMode(ECameraDirectorMode mode)
 {
-    //if prev mode was spring arm but new mode isn't then detach spring arm
-    if (mode_ == ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE &&
-        mode != ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE)
-    {
-        attachSpringArm(false);
+    {   //first remove any settings done by previous mode
+
+        //detach spring arm
+        if (mode_ == ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE &&
+            mode != ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE) 
+        {
+            attachSpringArm(false);
+        }
+
+        // Re-enable rendering
+        if (mode_ == ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY &&
+            mode != ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY)
+        {
+            UAirBlueprintLib::enableViewportRendering(this, true);
+        }
+
+        //Remove any existing key bindings for manual mode
+        if (mode != ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL) {
+            if (external_camera_ != nullptr
+                && manual_pose_controller_->getActor() == external_camera_) {
+
+                manual_pose_controller_->enableBindings(false);
+            }
+            //else someone else is bound to manual pose controller, leave it alone
+        }
+    }
+    
+    {   //perform any settings to enter in to this mode
+
+        switch (mode) {
+        case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL:
+            //if new mode is manual mode then add key bindings
+            manual_pose_controller_->enableBindings(true); break;
+        case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE:
+            //if we switched to spring arm mode then attach to spring arm (detachment was done earlier in method)
+            attachSpringArm(true); break;
+        case ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY:
+            UAirBlueprintLib::enableViewportRendering(this, false); break;
+        default:
+            //other modes don't need special setup
+            break;
+        }
+
     }
 
+    //make switch official
     mode_ = mode;
-
-    //if new mode is manual mode then add key bindings
-    if (mode_ == ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL)
-        manual_pose_controller_->enableBindings(true);
-    //else remove any existing key bindings for manual mode
-    else if (external_camera_ != nullptr && manual_pose_controller_->getActor() == external_camera_)
-        manual_pose_controller_->enableBindings(false);
-    //else someone else is bound to manual pose controller, leave it alone
-
-    //if we switched to spring arm mode then attach to spring arm (detachment was done earlier in method)
-    if (mode_ == ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE)
-        attachSpringArm(true);
 }
 
 void ACameraDirector::setupInputBindings()
@@ -171,7 +200,8 @@ void ACameraDirector::setupInputBindings()
     UAirBlueprintLib::BindActionToKey("inputEventManualView", EKeys::M, this, &ACameraDirector::inputEventManualView);
     UAirBlueprintLib::BindActionToKey("inputEventSpringArmChaseView", EKeys::Slash, this, &ACameraDirector::inputEventSpringArmChaseView);
     UAirBlueprintLib::BindActionToKey("inputEventBackupView", EKeys::K, this, &ACameraDirector::inputEventBackupView);
-    UAirBlueprintLib::BindActionToKey("inputEventNoDispalyView", EKeys::Hyphen, this, &ACameraDirector::inputEventNoDisplayView);
+    UAirBlueprintLib::BindActionToKey("inputEventNoDisplayView", EKeys::Hyphen, this, &ACameraDirector::inputEventNoDisplayView);
+    UAirBlueprintLib::BindActionToKey("inputEventFrontView", EKeys::I, this, &ACameraDirector::inputEventFrontView);
 }
 
 
@@ -183,6 +213,16 @@ void ACameraDirector::inputEventFpvView()
         backup_camera_->disableMain();
     if (fpv_camera_)
         fpv_camera_->showToScreen();
+}
+
+void ACameraDirector::inputEventFrontView()
+{
+    setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FRONT);
+    external_camera_->disableMain();
+    if (backup_camera_)
+        backup_camera_->disableMain();
+    if (front_camera_)
+        front_camera_->showToScreen();
 }
 
 void ACameraDirector::inputEventSpringArmChaseView()
@@ -229,13 +269,13 @@ void ACameraDirector::inputEventManualView()
 
 void ACameraDirector::inputEventNoDisplayView()
 {
-    setMode(ECameraDirectorMode::CAMREA_DIRECTOR_MODE_NODISPLAY);
+    setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY);
     disableCameras(true, true, true);
 }
 
 void ACameraDirector::inputEventBackupView()
 {
-    setMode(ECameraDirectorMode::CAMREA_DIRECTOR_MODE_BACKUP);
+    setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_BACKUP);
     external_camera_->disableMain();
     if (fpv_camera_)
         fpv_camera_->disableMain();
