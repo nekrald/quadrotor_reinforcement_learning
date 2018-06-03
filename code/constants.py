@@ -2,6 +2,7 @@ import os
 
 
 class RootConfigKeys(object):
+    APPROACH = "approach"
     TRAIN_AFTER = "train_after"
     SLEEP_TIME = "sleep_time"
     ANNEALING_STEPS = "annealing_steps"
@@ -55,3 +56,6 @@ class ActionConstants:
     DEFAULT_ACTION_SPACE = "default_action_space"
     GRID_ACTION_SPACE = "grid_action_space"
 
+class Approaches:
+    DQN_CNTK = "dqn_cntk"
+    REINFORCE_PYTORCH = "reinforce_pytorch"

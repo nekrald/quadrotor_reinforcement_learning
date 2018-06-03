@@ -8,13 +8,7 @@ import argparse
 import time
 
 
-file_dir = os.path.dirname(__file__)
-upper_dir = os.path.realpath(os.path.join(file_dir, ".."))
-sys.path.append(upper_dir)
-del file_dir
-del upper_dir
-
-from AirSimClient import *
+from client.AirSimClient import *
 
 from custom.action_space import DefaultActionSpace, \
     GridActionSpace, make_action, ActionSpaceType

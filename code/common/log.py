@@ -1,11 +1,14 @@
 import logging
+import uuid
 
 
-def configure_logging(file_path):
+def configure_logging(traindir):
+    main_file_path = os.path.join(traindir,
+        "main." + str(uuid.uuid4()) + ".log")
     logging.basicConfig(level=logging.DEBUG,
 	format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
         datefmt='%m-%d %H:%M',
-        filename=file_path,
+        filename=main_file_path,
         filemode='w')
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)

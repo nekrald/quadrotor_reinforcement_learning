@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class ReplayMemory(object):
     """
     ReplayMemory keeps track of the environment dynamic.

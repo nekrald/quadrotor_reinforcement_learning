@@ -58,4 +58,41 @@ def make_default_reward_config(reward_type):
         raise ValueError("unknown reward type")
     return reward_config
 
+def init_and_dump_configs():
+    config_grid_path = make_default_root_config()
+    config_grid_explore = make_default_root_config()
+
+    config_default_path = make_default_root_config()
+    config_default_explore = make_default_root_config()
+
+    reward_explore = make_default_reward_config(
+            RewardType.EXPLORATION_REWARD)
+    reward_path = make_default_reward_config(
+            RewardType.PATH_REWARD)
+
+    action_grid = make_default_action_config(
+            ActionSpaceType.GRID_SPACE)
+    action_default = make_default_action_config(
+            ActionSpaceType.DEFAULT_SPACE)
+
+    for item in [config_grid_path, config_default_path]:
+        item[RootConfigKeys.REWARD_CONFIG] = reward_path
+    for item in [config_grid_explore, config_default_explore]:
+        item[RootConfigKeys.REWARD_CONFIG] = reward_explore
+    for item in [config_grid_path, config_grid_explore]:
+        item[RootConfigKeys.ACTION_CONFIG] = action_grid
+    for item in [config_default_path, config_default_explore]:
+        item[RootConfigKeys.ACTION_CONFIG] = action_default
+
+    names = ["grid_path", "default_path", \
+            "grid_explore", "default_explore"]
+    items = [config_grid_path, config_default_path, \
+            config_grid_explore, config_default_explore]
+
+    if not os.path.exists("config-example"):
+        os.makedirs("config-example")
+    for config, name in zip(items, names):
+        with open("config-example/" + name + ".json", "w") as f:
+            json.dump(config, f, indent=4)
+
 

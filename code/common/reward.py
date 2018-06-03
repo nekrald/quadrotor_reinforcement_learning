@@ -10,6 +10,49 @@ from scipy.spatial.distance import cityblock
 from scipy.spatial.distance import euclidean
 
 
+class AbstractReward(object):
+    def __init__(self):
+        pass
+
+    # Markers checking if values are required.
+    def need_quad_position():
+        raise NotImplementedError("Abstract method!")
+    def need_quad_vel():
+        raise NotImplementedError("Abstract method!")
+    def need_quad_image():
+        raise NotImplementedError("Abstract method!")
+    def need_client():
+        raise NotImplementedError("Abstract method!")
+    def need_last_reward():
+        raise NotImplementedError("Abstract method!")
+    def need_epoch_reward_sum():
+        raise NotImplementedError("Abstract method!")
+    def need_collision_info():
+        raise NotImplementedError("Abstract method!")
+
+    # Markers submitting values.
+    def submit_quad_position(quad_position):
+        raise NotImplementedError("Abstract method!")
+    def submit_quad_velocity(quad_velocity):
+        raise NotImplementedError("Abstract method!")
+    def submit_quad_image(quad_image):
+        raise NotImplementedError("Abstract method!")
+    def submit_client(client):
+        raise NotImplementedError("Abstract method!")
+    def submit_last_reward(last_reward):
+        raise NotImplementedError("Abstract method!")
+    def submit_epoch_reward_sum(reward_sum):
+        raise NotImplementedError("Abstract method!")
+    def submit_collision_info(collision_info):
+        raise NotImplementedError("Abstract method!")
+
+    # Reasonable logic.
+    def compute_reward():
+        raise NotImplementedError("Abstract method!")
+    def is_done(self):
+        raise NotImplementedError("Abstract method!")
+
+
 class RewardType(object):
     EXPLORATION_REWARD = "exploration"
     PATH_REWARD = "path"
@@ -64,7 +107,6 @@ class ExplorationReward(object):
                 depth_perspective_array = np.array(responses[0].image_data_float)
                 depth_vis_array = np.array(responses[1].image_data_float)
                 depth_planner_array = np.array(responses[2].image_data_float)
-
 
                 arrays = [depth_perspective_array,
                           depth_vis_array,
@@ -156,6 +198,7 @@ class PathReward(object):
                     quad_vel.y_val, quad_vel.z_val]) - 0.5)
                 reward = reward_dist + reward_speed
         return reward
+
 
 class LandscapeReward(object):
 
