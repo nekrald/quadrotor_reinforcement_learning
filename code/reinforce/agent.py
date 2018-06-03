@@ -15,7 +15,7 @@ state_dim = env.observation_space.shape
 
 plt.imshow(env.render("rgb_array"))
 
-agent = nn.Sequential(nn.Linear(state_dim[0], 100), nn.ReLU(), nn.Linear(100, n_actions) )
+network_agent = nn.Sequential(nn.Linear(state_dim[0], 100), nn.ReLU(), nn.Linear(100, n_actions) )
 
 def predict_proba(states):
     """
@@ -24,12 +24,12 @@ def predict_proba(states):
     :returns: numpy array of shape [batch, n_actions]
     """
     states = Variable(torch.FloatTensor(states))
-    probas = F.softmax(agent.forward(states))
+    probas = F.softmax(network_agent.forward(states))
     return probas.data.numpy()
 
 def generate_session(t_max=1000):
     """
-    Play a full session with REINFORCE agent and train at the session end.
+    Play a full session with REINFORCE network_agent and train at the session end.
     Returns sequences of states, actions and rewards.
     """
     #arrays to record session
@@ -82,12 +82,12 @@ def to_one_hot(y, n_dims=None):
 
 
 # Your code: define optimizers
-opt = torch.optim.Adam(agent.parameters())
+opt = torch.optim.Adam(network_agent.parameters())
 
 def train_on_session(states, actions, rewards, gamma = 0.99):
     """
     Takes a sequence of states, actions and rewards produced by generate_session.
-    Updates agent's weights by following the policy gradient above.
+    Updates network_agent's weights by following the policy gradient above.
     Please use Adam optimizer with default parameters.
     """
 
@@ -97,8 +97,8 @@ def train_on_session(states, actions, rewards, gamma = 0.99):
     cumulative_returns = np.array(get_cumulative_rewards(rewards, gamma))
     cumulative_returns = Variable(torch.FloatTensor(cumulative_returns))
 
-    # predict logits, probas and log-probas using an agent.
-    logits = agent.forward(states)
+    # predict logits, probas and log-probas using an network_agent.
+    logits = network_agent.forward(states)
     probas = F.softmax(logits)
     logprobas = F.log_softmax(logits)
 
