@@ -10,46 +10,49 @@ from scipy.spatial.distance import cityblock
 from scipy.spatial.distance import euclidean
 
 
+class RewardConfig(self):
+    def __init__(self):
+        reward_type = None
+
+
+class RewardRequirements(self):
+    def __init__(self):
+        self.need_quad_vel = None
+        self.need_quad_position = None
+        self.desired_requests = None
+        self.need_last_reward = None
+        self.need_epoch_reward_sum = None
+        self.need_collision_info = None
+
+
+class RewardInfo(self):
+    def __init__(self):
+        self.quad_vel = None
+        self.quad_position = None
+        self.desired_requests = None
+        self.last_reward = None
+        self.epoch_reward_sum = None
+        self.collision_info = None
+
+
 class AbstractReward(object):
     def __init__(self):
         pass
 
-    # Markers checking if values are required.
-    def need_quad_position():
-        raise NotImplementedError("Abstract method!")
-    def need_quad_vel():
-        raise NotImplementedError("Abstract method!")
-    def need_quad_image():
-        raise NotImplementedError("Abstract method!")
-    def need_client():
-        raise NotImplementedError("Abstract method!")
-    def need_last_reward():
-        raise NotImplementedError("Abstract method!")
-    def need_epoch_reward_sum():
-        raise NotImplementedError("Abstract method!")
-    def need_collision_info():
-        raise NotImplementedError("Abstract method!")
+    def get_requirements(self) -> RewardRequirements:
+        raise NotImplementedError
 
-    # Markers submitting values.
-    def submit_quad_position(quad_position):
-        raise NotImplementedError("Abstract method!")
-    def submit_quad_velocity(quad_velocity):
-        raise NotImplementedError("Abstract method!")
-    def submit_quad_image(quad_image):
-        raise NotImplementedError("Abstract method!")
-    def submit_client(client):
-        raise NotImplementedError("Abstract method!")
-    def submit_last_reward(last_reward):
-        raise NotImplementedError("Abstract method!")
-    def submit_epoch_reward_sum(reward_sum):
-        raise NotImplementedError("Abstract method!")
-    def submit_collision_info(collision_info):
-        raise NotImplementedError("Abstract method!")
+    def submit_info(self, info: RewardInfo):
+        raise NotImplementedError
+
+    def reset(self):
+        raise NotImplementedError
 
     # Reasonable logic.
-    def compute_reward():
+    def compute_reward() -> float:
         raise NotImplementedError("Abstract method!")
-    def is_done(self):
+
+    def is_done(self) -> bool:
         raise NotImplementedError("Abstract method!")
 
 
@@ -375,8 +378,8 @@ def make_reward(config, client):
         goal_id = reward_config[RewardConfigKeys.EXPLORE_GOAL_ID]
         max_height = reward_config[RewardConfigKeys.EXPLORE_MAX_HEIGHT]
         height_penalty = reward_config[RewardConfigKeys.EXPLORE_HEIGHT_PENALTY]
-        reward = CorridorReward(client, collision_penalty, height_penalty, used_cams, vehicle_rad, thresh_dist, goal_id,
-                                max_height)
+        reward = CorridorReward(client, collision_penalty, height_penalty,
+                used_cams, vehicle_rad, thresh_dist, goal_id, max_height)
     else:
         raise ValueError("Unknown reward type!")
     return reward

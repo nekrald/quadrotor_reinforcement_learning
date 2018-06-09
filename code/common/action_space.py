@@ -3,6 +3,20 @@ from enum import Enum
 from custom.constants import RootConfigKeys, ActionConfigKeys
 
 
+class AbstractActionSpace(object):
+    def __init__(self):
+        pass
+
+    def interpret_action(self, action):
+        raise NotImplementedError
+
+    def reset(self):
+        raise NotImplementedError
+
+    def get_num_actions(self):
+        raise NotImplementedError
+
+
 class ActionSpaceType(object):
     DEFAULT_SPACE = 'default'
     GRID_SPACE = 'grid'
@@ -35,6 +49,7 @@ class DefaultActionSpace(object):
 
     def get_num_actions(self):
         return self.num_actions
+
 
 class FlatActionSpace(object):
     def __init__(self, scaling_factor=0.25, backward_coef=0.25, sideways_coef=0.5, yaw_degree=20):
@@ -139,3 +154,4 @@ def make_action(config):
     else:
         raise ValueError("Unexpected ActionSpaceType.")
     return action
+

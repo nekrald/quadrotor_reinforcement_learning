@@ -3,41 +3,67 @@ import numpy as np
 from collections import defaultdict
 
 from client.AirSimClient import MultirotorClient, Pose, Vector3r, \
-    AirSimClientBase, ImageRequest, AirSimImageType
+    AirSimClientBase, ImageRequest, AirSimImageType, DrivetrainType
 
 
-class ObservationConfig(object):
+class StateData(object):
     def __init__(self):
-        self.camera_ids = [0, 1, 2, 3]
-        self.image_types = [
-                AirSimImageType.DepthPerspective,
-                AirSimImageType.Scene,
-                AirSimImageType.Segmentation
-            ]
-        # Expected to depend on image type,
-        # but not on camera.
-        self.transformation_law = [(84, 84), (84, 84), (20, 20)]
-        self.image_history = 4
+        self.position = None
+        self.velocity = None
+        self.np_array = None
 
-        self.track_position = False
-        self.image_types = []
-        self.make_flat_observation = False
+    def make_np_array(self):
+        raise NotImplementedError
+
+    def to_flat_array(self):
+        raise NotImplementedError
+
+
+class SensorData(object):
+    def __init__(self):
+        self.response_frames = []
+        self.transformed_frames = []
+
+        # If all shapes of transformed frames are equal,
+        # it is an np array of transformed frames.
+        # Else it is a join of flattened arrays.
+        self.np_array = None
+
+    def make_np_array(self):
+        raise NotImplementedError
+
+    def to_flat_array(self):
+        raise NotImplementedError
 
 
 class Observation(object):
     def __init__(self):
-        # Camera Inputs.
-        self.responses = []
-        self.transformed_frames = []
+        self.state_data = None
+        self.sensor_data = None
 
-        # Simulator (oracle) inputs.
-        self.positions = []
-        self.velocities = []
+    def to_flat_array(self):
+        raise NotImplementedError
 
-        self.np_conv_input = None
-        self.np_position_input = None
 
-        self.flat_observation = None
+class RequestConfig(object):
+    def __init__(self, request_data=None, provide_sensor=True,
+            provide_state=False, raw_result=False):
+        request_data = request_data or [
+                (3, AirSimImageType.DepthPerspective, (84, 84))]
+        self.request_data = request_data
+        self.provide_sensor = provide_sensor
+        self.provide_state = provide_state
+        self.raw_result = raw_result
+
+    def set_request_data(camera_ids, image_types,
+            transforms=None, dimensions=(84, 84)):
+        self.request_data = []
+        for ind_cam, camera in camera_ids:
+            for ind_type, image_type in image_types:
+                reshape = dimensions
+                if transforms is not None:
+                    reshape = transforms[ind_type]
+                self.request_data.append( (camera, image_type, reshape) )
 
 
 class EnvironmentConfig(object):
@@ -45,11 +71,11 @@ class EnvironmentConfig(object):
     def __init__(self):
         self.action_space = None
         self.reward_provider = None
-        self.observation_config = None
+        self.request_config = None
         self.forward_only = None
 
-    def __init__(self, action_space, reward_provider, state_config,
-            forward_only=False):
+    def __init__(self, action_space, reward_provider,
+            state_config, forward_only=False):
         self.action_space = action_space
         self.reward_provider = reward_provider
         self.state_config = state_config
@@ -57,12 +83,13 @@ class EnvironmentConfig(object):
 
 
 class QuadrotorEnvironment(Env):
-    def __init__(self, config):
-
+    def __init__(self, config: EnvironmentConfig):
         self.action_space = config.action_space
-        self.observation_config = config.observation_config
+        self.request_config = config.request_config
         self.reward_provider = config.reward_provider
         self.last_observation = None
+        self.last_state = None
+        self.forward_only = config.forward_only
         self.config = config
 
         # Activate client.
@@ -111,58 +138,8 @@ class QuadrotorEnvironment(Env):
         self.action_space.reset()
         self.reward_provider.reset()
         self.last_observation = None
+        self.last_state = None
         return self._get_observation()
-
-    def _configure_action_space(self):
-        raise NotImplementedError
-
-    def _configure_reward_provider(self):
-        raise NotImplementedError
-
-    def _get_observation(self):
-        requests = []
-        for id_camera in self.observation_config.camera_ids:
-            for scan_type in self.observation_config.image_types:
-                requests.append(ImageRequest(id_camera, scan_type,
-                    True, False))
-        responses = client.simGetImages(requests)
-
-        self.last_observation = self._prepare_observation(responses)
-
-        if self.observation_config.make_flat_observation:
-            raise NotImplementedError
-        else:
-            return self.last_observation
-
-    def _prepare_observation(self, responses):
-        current_observation = copy.deepcopy(self.last_observation)
-        transformed = self._transform_reposes(responses)
-        quad_position = client.getPosition()
-        quad_velocity = client.getVelocity()
-        collision_info = client.getCollisionInfo()
-        if current_observation is not None:
-            del current_observation.responses[0]
-            del current_observation.transformed_frames[0]
-            del current_observation.positions[0]
-            current_observation.np_conv_input = None
-            current_observation.np_position_input = None
-            current_observation.flat_observation = None
-        else:
-            current_observation = Observation()
-        while len(current_observation.responses) < \
-                self.observation_config.image_history:
-            current_observation.responses.append(responses)
-            current_observation.transformed_frames.append(responses)
-
-        raise NotImplementedError
-
-    def _transform_responses(self, responses):
-        raise NotImplementedError
-
-
-    def _get_complete_observation(self):
-        raise NotImplementedError
-
 
     def step(self, action):
         """Run one timestep of the environment's dynamics.
@@ -183,9 +160,10 @@ class QuadrotorEnvironment(Env):
             info (dict): contains auxiliary diagnostic information
                 (helpful for debugging, and sometimes learning)
         """
+        info = {}
         quad_offset = self.action_space.interpret_action(action)
-        quad_before_state = self.client.getPosition()
-        if args.forward_only:
+        client = self.client
+        if self.forward_only:
             if len(quad_offset) == 1:
                 client.rotateByYawRate(quad_offset[0],
                         move_duration)
@@ -199,20 +177,67 @@ class QuadrotorEnvironment(Env):
                 quad_offset[0], quad_offset[1],
                 quad_offset[2], move_duration,
                 DrivetrainType.MaxDegreeOfFreedom)
-        quad_position = client.getPosition()
-        quad_velocity = client.getVelocity()
-        collision_info = client.getCollisionInfo()
-
-
-        pass
+        observation = self._get_observation()
+        self._update_reward_provider()
+        reward = self.reward_provider.compute_reward()
+        done = self.reward_provider.is_done()
+        return observation, reward, done, info
 
     def render(self, mode='human'):
-        pass
+        raise NotImplementedError
 
     def close(self):
         return
 
     def seed(self, seed=None):
-        logger.warn("Could not seed environment %s", self)
-        return
+        if seed is not None:
+            np.random.seed(seed)
+
+    def _configure_action_space(self):
+        raise NotImplementedError
+
+    def _configure_reward_provider(self):
+        raise NotImplementedError
+
+    def _update_reward_provider(self):
+        collision_info = self.client.getCollisionInfo()
+        raise NotImplementedError
+
+    def _get_sensor_data(self):
+        sensed = SensorData()
+        requests = []
+        transforms = []
+        for id_camera, scan_type, transform in self.request_config.request_data:
+            requests.append(ImageRequest(id_camera, scan_type,
+                    True, False))
+            transforms.append(transform)
+        sensed.response_frames = client.simGetImages(requests)
+        for answer, transform in zip(sensed.response_frames, transforms):
+            sensed.transformed_frames.append(
+                    transform_response(answer,
+                        transform[0], transform[1]))
+        sensed.make_np_array()
+        return sensed
+
+    def _get_state_data(self):
+        state = StateData()
+        state.quad_position = self.client.getPosition()
+        state.quad_velocity = self.client.getVelocity()
+        if self.request_config.provide_state:
+            state.make_np_array()
+        return state
+
+    def _get_observation(self):
+        observation = Observation()
+        if self.request_config.provide_sensor:
+            observation.sensor_data = self._get_sensor_data()
+        state_data =  self._get_state_data()
+        if self.request_config.provide_state:
+            observation.state_data = state_data
+        self.last_observation = observation
+        self.last_state = state_data
+        if self.request_config.raw_result:
+            return observation.to_flat_array()
+        return observation
+
 
