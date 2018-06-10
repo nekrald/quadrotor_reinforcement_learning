@@ -1,107 +1,81 @@
-from code.interfaces import IScheduler
+from code.interfaces import IScheduler, ISchedulerConfig
 from agent import REINFORCEAgent
+
+
+class ConfigREINFORCE(ISchedulerConfig):
+    def __init__(self, env_config: EnvironmentConfig, args):
+        super(self, ConfigREINFORCE).__init__(env_config, args)
+        self.epoch_count = epoch_count # 100
+        self.sessions_in_epoch  = sessions_in_epoch # 100
+        self.max_steps = max_steps # 5000
+        self.save_period = save_period
+        self.checkpoint = checkpoint
+
 
 class REINFORCETrainScheduler(IScheduler):
 
-    def __init__(self, config, args):
-        super(self, REINFORCETrainScheduler).__init__(config, args)
-        self.size_rows =
-        self.size_cols =
-        self.num_frames =
-
-    def generate_session(self, t_max):
-        states, actions, rewards = [], [], []
-        self.reward_processor.reset()
-        self.action_processor.reset()
-        self.reset_client()
-
-        current_state =
-        for tm in range(t_max):
-            action_probas = self.agent.predict_proba(
-                    np.array([current_state]))[0]
-            action = np.random.choice(n_actions, p=action_probas)
-            quad_offset = action_processor.interpret_action(action)
-            quad_before_state = client.getPosition()
-            if args.forward_only:
-                if len(quad_offset) == 1:
-                    client.rotateByYawRate(quad_offset[0],
-                            move_duration)
-                else:
-                    client.moveByVelocity(
-                        quad_offset[0], quad_offset[1],
-                        quad_offset[2], move_duration,
-                        DrivetrainType.ForwardOnly)
-            else:
-                client.moveByVelocity(
-                    quad_offset[0], quad_offset[1],
-                    quad_offset[2], move_duration,
-                    DrivetrainType.MaxDegreeOfFreedom)
-            quad_position = client.getPosition()
-            quad_velocity = client.getVelocity()
-            collision_info = client.getCollisionInfo()
-
-            new_state =
-
-            states.append(current_state)
-            actions.append(action)
-            rewards.append(reward)
-
-            current_state = new_state
-            done =
-            if done: break
-        return states, actions, rewards
-
-
-    def reset_client(self):
-        logging.info("Resetting the client.")
-        self.client.reset()
-        self.client.enableApiControl(True)
-        self.client.armDisarm(True)
-        if not self.config[RootConfigKeys.USE_FLAG_POS]:
-            self.client.simSetPose(Pose(Vector3r(
-                self.initX, self.initY, self.initZ),
-                AirSimClientBase.toQuaternion(0, 0, 0)),
-                ignore_collison=True)
-
-    def process_problem(self):
-        epoch_count = config[RootConfigKeys.EPOCH_COUNT]
-        max_steps = epoch_count * config[RootConfigKeys.MAX_STEPS_MUL]
-        current_step = 0
-
-        responses = client.simGetImages(
-            [ImageRequest(3, AirSimImageType.DepthPerspective,
-            True, False)])
-
-        image_state = transform_input(responses)
-
-        # TODO(nekrald):
-        #   In case of complete information,
-        #   coordinates are also attached to state.
-
-
-        image_data = (self.num_frames, self.size_rows, self.size_cols)
-        oracle_data = None
-
-        self.reward_processor = make_reward(self.config, self.client)
-        self.action_processor = make_action(self.config)
-
+    def __init__(self, config: ConfigREINFORCE, num_frames=4):
+        super(self, REINFORCETrainScheduler).__init__(config)
+        self.num_frames = num_frames
         self.agent = REINFORCEAgent(image_data, oracle_data,
                 traindir_path=args.traindir,
                 checkpoint_path=args.checkpoint)
 
-        launch_reward_sum = 0
-        while current_step < max_steps:
-            action = agent.act(current_state)
+    def generate_session(self, t_max=2000):
+        """
+        Play a full session with REINFORCE network_agent
+        and prepare for train at the session end.
+        Returns sequences of states, actions and rewards.
+        """
 
+        # Arrays to record session
+        states,actions,rewards = [],[],[]
+        s = env.reset()
+        for t in range(t_max):
+            #action probabilities array aka pi(a|s)
+            action_probas = predict_proba(np.array([s]))[0]
+            a = np.random.choice(n_actions, p=action_probas)
+            new_s, r, done, info = env.step(a)
 
+            #record session history to train later
+            states.append(s)
+            actions.append(a)
+            rewards.append(r)
 
-            agent.observe(current_state, action, reward, done)
-            agent.train()
+            s = new_s
+            if done: break
+        return states, actions, rewards
 
+    def get_cumulative_rewards(rewards, #rewards at each step
+            gamma = 0.99 #discount for reward
+            ):
+        G = [rewards[-1]]
+        for r in rewards[-2::-1]:
+            G.append(r + gamma * G[-1])
+        return G[::-1]
 
+    def evaluate_problem(self):
+        max_steps = config[RootConfigKeys.MAX_STEPS]
+        epoch_count = config[RootConfigKeys.EPOCH_COUNT]
+        for ind in range(epoch_count):
+            self.generate_session(t_max=max_steps)
 
-
-
-
-
+    def process_problem(self):
+        epoch_count = config[RootConfigKeys.EPOCH_COUNT]
+        max_steps   = config[RootConfigKeys.MAX_STEPS]
+        save_period = config[RootConfigKeys.SAVE_PERIOD]
+        sessions_in_epoch = config.sessions_in_epoch
+        for epoch_id in range(epoch_count):
+            reward_list = []
+            for session_id in sessions_in_epoch:
+                states, actions, rewards = self.generate_session(
+                    t_max=max_steps)
+                sum_rewards = self.agent.train_on_session(
+                        states, actions, rewards)
+                reward_list.append(sum_rewards)
+                if (ind + 1) % save_period == 0:
+                    # TODO(nekrald)
+                    # Save the network
+                    pass
+            mean_reward = np.mean(reward_list)
 
