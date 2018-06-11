@@ -1,26 +1,47 @@
 import gym
-import numpy as np, pandas as pd
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-%matplotlib inline
 
-import torch, torch.nn as nn
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
 
-class Agent(object):
+class ConfigAgentREINFORCE(object):
 
-    def __init__(self):
+    def __init__(self, request_config,
+            network_description, n_actions, optimizer_config):
+        self.request_config = request_config
+        self.network_description = network_description
+        self.optimizer_config = optimizer_config
+        self.n_actions = n_actions
+        self.lr = lr
+
+
+class AgentREINFORCE(object):
+
+    def __init__(self, config: ConfigAgentREINFORCE):
+        self.config = config
+        self.request_config = config.request_config
+        self.network_description = config.network_description
+        self.raw_provided = config.raw_result
+        self.state_provided = config.provide_state
+        self.sensor_provided = config.provide_sensor
+
+        self._build_network()
+        self._build_optimizer()
+
+        self.n_actions = config.n_actions
+
+    def _build_network(self):
+        self.network = None
         raise NotImplementedError
-        n_actions = env.action_space.n
-        state_dim = env.observation_space.shape
-        self.network_agent = nn.Sequential(
-                nn.Linear(state_dim[0], 100),
-                nn.ReLU(),
-                nn.Linear(100, n_actions)
-        )
-        # After agent is created.
-        self.opt = torch.optim.Adam(network_agent.parameters())
+
+    def _make_optimizer(self):
+        self.opt = make_optimizer(
+                self.optimizer_config, self.network)
 
     def predict_proba(self, states):
         """
@@ -45,52 +66,42 @@ class Agent(object):
         return Variable(y_one_hot) if isinstance(
                 y, Variable) else y_one_hot
 
-    def train_on_session(
-            self, states, actions, rewards, gamma = 0.99):
+    def train_on_session(self, states, actions,
+            rewards, cumulative_rewards):
         """
         Takes a sequence of states, actions and rewards
         produced by generate_session.
         Updates network_agent's weights by following the
         policy gradient above.
         """
-
-        # cast everything into a variable
         states = Variable(torch.FloatTensor(states))
         actions = Variable(torch.IntTensor(actions))
-        cumulative_returns = np.array(
-                get_cumulative_rewards(rewards, gamma))
+        cumulative_returns = np.array(cumulative_rewards)
         cumulative_returns = Variable(
                 torch.FloatTensor(cumulative_returns))
 
-        # predict logits, probas and
-        # log-probas using an network_agent.
         logits = network_agent.forward(states)
         probas = F.softmax(logits)
         logprobas = F.log_softmax(logits)
 
-        assert all(
-                isinstance(v, Variable) for v in [
+        assert all(isinstance(v, Variable) for v in [
                     logits, probas, logprobas]), \
-            "please use compute using torch tensors and don't use predict_proba function"
+            "please use compute using torch tensors" + \
+            "and don't use predict_proba function"
 
-        # select log-probabilities for chosen actions, log pi(a_i|s_i)
         logprobas_for_actions = torch.sum(
                 logprobas * to_one_hot(actions), dim = 1)
 
-        # REINFORCE objective function
         J_hat = torch.mean(
                 logprobas_for_actions * cumulative_returns)
 
-        #regularize with entropy
         entropy_reg = - (probas * logprobas).sum(-1).mean()
 
         loss = - J_hat - 0.1 * entropy_reg
 
-        # Gradient descent step
         loss.backward()
         opt.step()
         opt.zero_grad()
 
-        # technical: return session rewards to print them later
         return np.sum(rewards)
 

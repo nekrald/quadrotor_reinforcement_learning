@@ -3,6 +3,7 @@ from agent import REINFORCEAgent
 
 
 class ConfigREINFORCE(ISchedulerConfig):
+
     def __init__(self, env_config: EnvironmentConfig, args):
         super(self, ConfigREINFORCE).__init__(env_config, args)
         self.epoch_count = epoch_count # 100
@@ -46,9 +47,7 @@ class REINFORCETrainScheduler(IScheduler):
             if done: break
         return states, actions, rewards
 
-    def get_cumulative_rewards(rewards, #rewards at each step
-            gamma = 0.99 #discount for reward
-            ):
+    def get_cumulative_rewards(self, rewards, gamma = 0.9999):
         G = [rewards[-1]]
         for r in rewards[-2::-1]:
             G.append(r + gamma * G[-1])
@@ -60,7 +59,7 @@ class REINFORCETrainScheduler(IScheduler):
         for ind in range(epoch_count):
             self.generate_session(t_max=max_steps)
 
-    def process_problem(self):
+    def process_problem(self, gamma=0.9999):
         epoch_count = config[RootConfigKeys.EPOCH_COUNT]
         max_steps   = config[RootConfigKeys.MAX_STEPS]
         save_period = config[RootConfigKeys.SAVE_PERIOD]
@@ -70,6 +69,8 @@ class REINFORCETrainScheduler(IScheduler):
             for session_id in sessions_in_epoch:
                 states, actions, rewards = self.generate_session(
                     t_max=max_steps)
+                cumulative_rewards = get_cumulative_rewards(
+                        rewards, gamma)
                 sum_rewards = self.agent.train_on_session(
                         states, actions, rewards)
                 reward_list.append(sum_rewards)
