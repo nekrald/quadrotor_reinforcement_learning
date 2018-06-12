@@ -63,7 +63,8 @@ class RequestConfig(object):
                 reshape = dimensions
                 if transforms is not None:
                     reshape = transforms[ind_type]
-                self.request_data.append( (camera, image_type, reshape) )
+                self.request_data.append(
+                        (camera, image_type, reshape) )
 
 
 class EnvironmentConfig(object):
@@ -207,12 +208,14 @@ class QuadrotorEnvironment(Env):
         sensed = SensorData()
         requests = []
         transforms = []
-        for id_camera, scan_type, transform in self.request_config.request_data:
+        for id_camera, scan_type, transform in \
+                self.request_config.request_data:
             requests.append(ImageRequest(id_camera, scan_type,
                     True, False))
             transforms.append(transform)
         sensed.response_frames = client.simGetImages(requests)
-        for answer, transform in zip(sensed.response_frames, transforms):
+        for answer, transform in zip(
+                sensed.response_frames, transforms):
             sensed.transformed_frames.append(
                     transform_response(answer,
                         transform[0], transform[1]))

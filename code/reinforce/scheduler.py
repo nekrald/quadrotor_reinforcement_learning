@@ -4,23 +4,54 @@ from agent import REINFORCEAgent
 
 class ConfigREINFORCE(ISchedulerConfig):
 
-    def __init__(self, env_config: EnvironmentConfig, args):
-        super(self, ConfigREINFORCE).__init__(env_config, args)
-        self.epoch_count = epoch_count # 100
-        self.sessions_in_epoch  = sessions_in_epoch # 100
-        self.max_steps = max_steps # 5000
+    def __init__(self,
+            env_config: EnvironmentConfig,
+            epoch_count=100,
+            sessions_in_epoch=1000,
+            max_steps=3000,
+            frames_in_state=4,
+            save_period=2000,
+            save_path="traindir",
+            chekpoint_path=None):
+        super(self, ConfigREINFORCE).__init__(env_config)
+
+        self.epoch_count = epoch_count
+        self.sessions_in_epoch  = sessions_in_epoch
+        self.max_steps = max_steps
+
         self.save_period = save_period
-        self.checkpoint = checkpoint
+        self.save_path = save_path
+
+        self.checkpoint_path = checkpoint_path
+        self.frames_in_state = frames_in_state
 
 
 class REINFORCETrainScheduler(IScheduler):
 
-    def __init__(self, config: ConfigREINFORCE, num_frames=4):
+    def __init__(self, config: ConfigREINFORCE):
         super(self, REINFORCETrainScheduler).__init__(config)
-        self.num_frames = num_frames
-        self.agent = REINFORCEAgent(image_data, oracle_data,
-                traindir_path=args.traindir,
-                checkpoint_path=args.checkpoint)
+        self.epoch_count = config.epoch_count
+        self.sessions_in_epoch = config.sessions_in_epoch
+        self.max_steps = config.max_steps
+        self.save_period = config.save_period
+        self.save_path = config.save_path
+
+        self.checkpoint_path = checkpoint_path
+        self.frames_in_state = config.frames_in_state
+
+
+        self._prepare_agent_config()
+
+        self.agent = AgentREINFORCE(self.agent_config)
+        self.n_actions = self.agent_config.n_actions
+        self.last_frames = []
+
+    def _prepare_agent_config(self):
+        self.agent_config = None
+        raise NotImplementedError
+
+    def _join_frames(self, next_state):
+        raise NotImplementedError
 
     def generate_session(self, t_max=2000):
         """
@@ -31,10 +62,12 @@ class REINFORCETrainScheduler(IScheduler):
 
         # Arrays to record session
         states,actions,rewards = [],[],[]
+        self.last_frames = []
         s = env.reset()
         for t in range(t_max):
             #action probabilities array aka pi(a|s)
-            action_probas = predict_proba(np.array([s]))[0]
+            prepared_state = self._join_frames(s)
+            action_probas = predict_proba(prepared_state)[0]
             a = np.random.choice(n_actions, p=action_probas)
             new_s, r, done, info = env.step(a)
 
