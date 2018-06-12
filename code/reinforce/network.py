@@ -10,31 +10,61 @@ from torch.autograd import Variable
 
 
 # Block configs.
-class BlockConfig(object):
+
+
+class AbstractBlockConfig(object):
+
     def __init__(self):
         pass
+
     def get_type(self):
-        raise NotImplementedError
+        raise NotImplementedError("Abstract class!")
+
+    def get_last_fc_size(self):
+        raise NotImplementedError("Abstract class!")
 
 
-class ConvBlockConfig(BlockConfig):
-    def __init__(self):
-        self.in_count = 4
-        self.out_counts = [16, 32, 32]
-        self.strides = [2, 2, 2]
-        self.use_bn = True
-        self.linear_out = 100
+class ConvBlockConfig(AbstractBlockConfig):
+
+    def __init__(self, in_count=4,
+            out_counts=[16, 32, 32],
+            strides=[2, 2, 2],
+            kernel_sizes = [5, 5, 5],
+            use_bn=True,
+            linear_out=100,
+            nonlinearity=F.relu,
+            nonl_out=F.relu):
+
+        self.in_count = in_count
+        self.out_counts = out_counts
+        self.strides = strides
+        self.use_bn = use_bn
+        self.linear_out = linear_out
+        self.kernel_sizes = kernel_sizes
+        self.nonlinearity = nonlinearity
+        self.nonl_out = nonl_out
+
     def get_type(self):
         return "conv"
 
+    def get_last_fc_size(self):
+        return self.linear_out
+
 
 class FeedForwardBlockConfig(BlockConfig):
-    def __init__(self):
-        self.input_shape = 4
-        self.layer_sizes = [100, 100]
+
+    def __init__(self, in_size=None,
+            hidden_sizes=[100, 100],
+            nonlinearity=F.relu):
+        self.in_size = in_size
+        self.hiden_sizes = [100, 100]
         self.nonlinearity = F.relu
+
     def get_type(self):
         return "feedforward"
+
+    def get_last_fc_size(self):
+        return self.hiden_sizes[-1]
 
 
 # Block descriptions.
@@ -43,56 +73,135 @@ class FeedForwardBlockConfig(BlockConfig):
 class FeedForwardBlock(nn.Module):
     def __init__(self, config: FeedForwardBlockConfig):
         super(FeedForwardBlock, self).__init__()
-        raise NotImplementedError
+        self.config = config
+        self.hidden_sizes = config.hidden_sizes
+        in_size = config.in_size
+        self.fcs = []
+        self.nls = []
+        for hidden in self.config.hidden_sizes:
+            if in_size is None:
+                self.fcs.append(None)
+            else:
+                self.fcs.append(nn.Linear(in_size, hidden))
+            self.nls.append(config.nonlinearity)
+            in_size = hidden
 
     def forward(self, x):
-        raise NotImplementedError
+        last_element = x
+        for fc, nl in zip(self, fcs, self.nls):
+            if fc is None:
+                hidden = self.hidden_sizes[0]
+                in_sz = x.view(x.size(0), -1).size(1)
+                assert fcs[0] is None
+                fcs[0] = nn.Linear(in_sz, hidden)
+                fc = fcs[0]
+            last_element = nl(fc(last_element))
+        return last_element
 
 
 class ConvBlock(nn.Module):
 
     def __init__(self, config: ConvBlockConfig):
         super(ConvBlock, self).__init__()
-        raise NotImplementedError
-        self.conv1 = nn.Conv2d(in_count, 16, kernel_size=5, stride=2)
-        self.bn1 = nn.BatchNorm2d(16)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=5, stride=2)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
-        self.bn3 = nn.BatchNorm2d(32)
-        self.head= nn.Linear(448, 2)
+        self.config = config
+        self.convs = []
+        self.bns = []
+        self.nls = []
+        self.last_nl = config.nonl_out
+
+        last_count = config.in_count
+        for count, strd, ksz in zip(
+                config.out_counts, config.strides, config.kernel_sizes):
+            self.convs.append(nn.Conv2d(
+                last_count, count, kernel_size=ksz, stride=strd))
+            bn = None
+            if config.use_bn:
+                bn = nn.BatchNorm2d(count)
+            self.bns.append(bn)
+            self.nls.append(config.nonlinearity)
+            last_count = count
+        self.linear_size = config.linear_out
+        self.fc_out = None
 
     def forward(self, x):
-        raise NotImplementedError
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
-        return self.head(x.view(x.size(0), -1))
+        last_element = x
+        for conv, bn, nonl in zip(self.convs, self.bns, self.nls):
+            last_element = conv(last_element)
+            if bn is not None:
+                last_element = bn(last_element)
+            last_element = nonl(last_element)
+        if self.fc_out is None:
+            last_size = last_element.view(last_element.size(0), -1).size(1)
+            self.fc_out = nn.Linear(last_size, self.linear_size)
+        last_element = self.fc_out(last_element)
+        if self.last_nl is not None:
+            last_element = self.last_nl(last_element)
+        return last_element
 
 
 # Network description
 
 
 def NetworkConfig(object):
-    def __init__(self):
-        self.part_sizes = []
-        self.reshape_queries = []
-        self.block_configs = []
-        self.join_layer_size = None
-        self.last_layers = []
-        self.head_size = []
+
+    def __init__(self, part_sizes=28224,
+            reshape_queries=[1, 4, 84, 84],
+            block_configs=ConvBlockConfig(),
+            last_fc_sizes=[],
+            last_nls=[],
+            head_size=8):
+        self.part_sizes = part_sizes
+        self.reshape_queries = reshape_queries
+        self.block_configs = block_configs
+
+        self.last_fc_sizes = last_fc_sizes
+        self.last_nls = last_nls
+
+        self.head_size = head_size
 
 
 def Network(nn.Module):
+
     def __init__(self, config: NetworkConfig):
         super(Network, self).__init__()
-        raise NotImplementedError
+        self.config = config
+        self.shapes = config.reshape_queries
+        assert len(config.parts_sizes) == len(config.reshape_queries)
+        assert len(config.part_sizes) == len(config.block_configs)
+        assert len(part_sizes) == 1, \
+                "by now only one part is supported"
+        assert config.block_configs[0].get_type == "conv", \
+                "by now only conv block to be processed"
+        self.blocks = [ConvBlock(config.block_configs[0])]
+        out_linear_shape = config.block_configs[0].get_last_fc_size()
+        self.fc_intermediate = []
+        self.nl_intermediate = []
+        last_sz = self.out_linear_shape
+        for sz_fc, nl in zip(self.last_fc_sizes, self.last_nls):
+            self.fc_intermediate.append(nn.Linear(last_sz, sz_fc))
+            self.nl_intermediate.append(nl)
+            last_sz = sz_fc
+        self.out_linear = nn.Linear(last_sz, head_size)
+        return self.out_linear
 
     def forward(self, x):
-        raise NotImplementedError
+        assert len(self.shapes) == 1, "only one shape is not supported"
+        shape = self.shapes[0]
+        block = self.blocks[0]
+        result = block.forward(x.view(*shape))
+        for fc, nl in zip(self.fc_intermediate, self.nl_intermediate):
+            result = nl(fc(result))
+        result = self.out_linear(result)
+        return result
 
 
 # Optimizers
+
+
+class OptimizerConfig(object):
+    def __init__(self, optimizer_name="adam", lr="0.001"):
+        self.optimizer_name = optimizer_name
+        self.lr = lr
 
 
 def make_optimizer(optimizer_config, network):
