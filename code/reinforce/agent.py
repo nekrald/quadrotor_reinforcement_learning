@@ -9,26 +9,31 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 
+from network import Network, NetworConfig, make_optimizer, \
+        ConvBlockConfig, FeedForwardBlockConfig
+
+
 class ConfigAgentREINFORCE(object):
 
     def __init__(self, request_config,
-            network_description, n_actions, optimizer_config):
+            network_config, n_actions, optimizer_config):
         self.request_config = request_config
-        self.network_description = network_description
-        self.optimizer_config = optimizer_config
+        self.network_config = network_config
+        self.opt_config = optimizer_config
         self.n_actions = n_actions
-        self.lr = lr
 
 
 class AgentREINFORCE(object):
 
     def __init__(self, config: ConfigAgentREINFORCE):
         self.config = config
+
         self.request_config = config.request_config
-        self.network_description = config.network_description
         self.raw_provided = config.raw_result
+        assert self.raw_provided, "Should be flat array."
         self.state_provided = config.provide_state
         self.sensor_provided = config.provide_sensor
+        self.network_config = config.network_config
 
         self._build_network()
         self._build_optimizer()
@@ -36,10 +41,9 @@ class AgentREINFORCE(object):
         self.n_actions = config.n_actions
 
     def _build_network(self):
-        self.network = None
-        raise NotImplementedError
+        self.network = Network(self.network_config)
 
-    def _make_optimizer(self):
+    def _build_optimizer(self):
         self.opt = make_optimizer(
                 self.optimizer_config, self.network)
 
@@ -50,7 +54,7 @@ class AgentREINFORCE(object):
         :returns: numpy array of shape [batch, n_actions]
         """
         states = Variable(torch.FloatTensor(states))
-        probas = F.softmax(network_agent.forward(states))
+        probas = F.softmax(self.network.forward(states))
         return probas.data.numpy()
 
     def to_one_hot(self, y, n_dims=None):
@@ -80,7 +84,7 @@ class AgentREINFORCE(object):
         cumulative_returns = Variable(
                 torch.FloatTensor(cumulative_returns))
 
-        logits = network_agent.forward(states)
+        logits = self.network.forward(states)
         probas = F.softmax(logits)
         logprobas = F.log_softmax(logits)
 

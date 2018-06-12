@@ -102,6 +102,7 @@ class FeedForwardBlock(nn.Module):
 class ConvBlock(nn.Module):
 
     def __init__(self, config: ConvBlockConfig):
+
         super(ConvBlock, self).__init__()
         self.config = config
         self.convs = []
@@ -111,7 +112,9 @@ class ConvBlock(nn.Module):
 
         last_count = config.in_count
         for count, strd, ksz in zip(
-                config.out_counts, config.strides, config.kernel_sizes):
+                config.out_counts,
+                config.strides,
+                config.kernel_sizes):
             self.convs.append(nn.Conv2d(
                 last_count, count, kernel_size=ksz, stride=strd))
             bn = None
@@ -131,8 +134,10 @@ class ConvBlock(nn.Module):
                 last_element = bn(last_element)
             last_element = nonl(last_element)
         if self.fc_out is None:
-            last_size = last_element.view(last_element.size(0), -1).size(1)
-            self.fc_out = nn.Linear(last_size, self.linear_size)
+            last_size = last_element.view(
+                    last_element.size(0), -1).size(1)
+            self.fc_out = nn.Linear(
+                    last_size, self.linear_size)
         last_element = self.fc_out(last_element)
         if self.last_nl is not None:
             last_element = self.last_nl(last_element)
@@ -199,6 +204,7 @@ def Network(nn.Module):
 
 
 class OptimizerConfig(object):
+
     def __init__(self, optimizer_name="adam", lr="0.001"):
         self.optimizer_name = optimizer_name
         self.lr = lr
