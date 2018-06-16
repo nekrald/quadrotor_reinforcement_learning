@@ -1,4 +1,5 @@
 from enum import Enum
+import logging
 
 from custom.constants import RootConfigKeys, ActionConfigKeys
 
@@ -24,7 +25,7 @@ class ActionSpaceType(object):
     CORRIDOR_SPACE = 'corridor'
 
 
-class DefaultActionSpace(object):
+class DefaultActionSpace(AbstractActionSpace):
     def __init__(self, scaling_factor=0.25):
         self.scaling_factor = scaling_factor
         self.num_actions = 7
@@ -47,6 +48,9 @@ class DefaultActionSpace(object):
             quad_offset = (0, 0, -scaling_factor)
         return quad_offset
 
+    def reset():
+        pass
+
     def get_num_actions(self):
         return self.num_actions
 
@@ -58,6 +62,9 @@ class FlatActionSpace(object):
         self.sideways_coef = sideways_coef
         self.yaw_degree = yaw_degree
         self.num_actions = 7
+
+    def reset(self):
+        pass
 
     def interpret_action(self, action):
         scaling_factor = self.scaling_factor
@@ -102,6 +109,9 @@ class GridActionSpace(object):
     def get_num_actions(self):
         return self.grid_size * self.grid_size
 
+    def reset(self):
+        pass
+
 
 class CorridorActionSpace(object):
     def __init__(self, scaling_factor=0.5, backward_coef=0.25, sideways_coef=0.5, yaw_degree=20):
@@ -143,13 +153,16 @@ def make_action(config):
     action_config = config[RootConfigKeys.ACTION_CONFIG]
     scale_factor = action_config[ActionConfigKeys.SCALING_FACTOR]
     if action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.DEFAULT_SPACE:
-        print("Selected default action space")
+        logging.info("Selected default action space.")
         action = DefaultActionSpace(scale_factor)
     elif action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.GRID_SPACE:
         action = GridActionSpace(scale_factor, action_config[ActionConfigKeys.GRID_SIZE])
+        logging.info("Selected Grid Action Space.")
     elif action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.FLAT_SPACE:
         action = FlatActionSpace(scale_factor)
+        logging.info("Selected Flat action space")
     elif action_config[ActionConfigKeys.ACTION_SPACE_TYPE] == ActionSpaceType.CORRIDOR_SPACE:
+        logging.info("Selected Corridor Action Space")
         action = CorridorActionSpace(scale_factor)
     else:
         raise ValueError("Unexpected ActionSpaceType.")

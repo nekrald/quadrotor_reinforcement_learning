@@ -6,6 +6,7 @@ import numpy as np
 from enum import Enum
 from AirSimClient import AirSimImageType, ImageRequest
 from custom.constants import RootConfigKeys, RewardConfigKeys
+
 from scipy.spatial.distance import cityblock
 from scipy.spatial.distance import euclidean
 
@@ -36,8 +37,11 @@ class RewardInfo(self):
 
 
 class AbstractReward(object):
-    def __init__(self):
-        pass
+    def __init__(self, supported=[]):
+        self.supported = supported
+
+    def check_if_outdoors_supported(self, outdoor_item):
+        return outdoor_item in self.supported
 
     def get_requirements(self) -> RewardRequirements:
         raise NotImplementedError
@@ -331,6 +335,7 @@ class CorridorReward(object):
             logging.debug("ExplorationReward: after truncation" + \
                           " we obtained {}".format(reward))
         return reward
+
 
 def make_reward(config, client):
     reward_config = config[RootConfigKeys.REWARD_CONFIG]
