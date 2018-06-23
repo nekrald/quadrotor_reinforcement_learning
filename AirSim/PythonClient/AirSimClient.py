@@ -28,7 +28,7 @@ class MsgpackMixin:
         return obj
 
 
-class AirSimImageType:    
+class AirSimImageType:
     Scene = 0
     DepthPlanner = 1
     DepthPerspective = 2
@@ -41,7 +41,7 @@ class AirSimImageType:
 class DrivetrainType:
     MaxDegreeOfFreedom = 0
     ForwardOnly = 1
-    
+
 class LandedState:
     Landed = 0
     Flying = 1
@@ -110,18 +110,18 @@ class RCData(MsgpackMixin):
     def __init__(self, timestamp = 0, pitch = 0.0, roll = 0.0, throttle = 0.0, yaw = 0.0, switch1 = 0,
                  switch2 = 0, switch3 = 0, switch4 = 0, switch5 = 0, switch6 = 0, switch7 = 0, switch8 = 0, is_initialized = False, is_valid = False):
         self.timestamp = timestamp
-        self.pitch = pitch 
+        self.pitch = pitch
         self.roll = roll
-        self.throttle = throttle 
-        self.yaw = yaw 
-        self.switch1 = switch1 
-        self.switch2 = switch2 
-        self.switch3 = switch3 
-        self.switch4 = switch4 
+        self.throttle = throttle
+        self.yaw = yaw
+        self.switch1 = switch1
+        self.switch2 = switch2
+        self.switch3 = switch3
+        self.switch4 = switch4
         self.switch5 = switch5
-        self.switch6 = switch6 
-        self.switch7 = switch7 
-        self.switch8 = switch8 
+        self.switch6 = switch6
+        self.switch7 = switch7
+        self.switch8 = switch8
         self.is_initialized = is_initialized
         self.is_valid = is_valid
 
@@ -160,7 +160,7 @@ class CarControls(MsgpackMixin):
     manual_gear = 0
     gear_immediate = True
 
-    def __init__(self, throttle = 0, steering = 0, brake = 0, 
+    def __init__(self, throttle = 0, steering = 0, brake = 0,
         handbrake = False, is_manual_gear = False, manual_gear = 0, gear_immediate = True):
         self.throttle = throttle
         self.steering = steering
@@ -213,7 +213,7 @@ class CameraInfo(MsgpackMixin):
 class AirSimClientBase:
     def __init__(self, ip, port, timeout_value = 3600):
         self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = timeout_value, pack_encoding = 'utf-8', unpack_encoding = 'utf-8')
-        
+
     @staticmethod
     def stringToUint8Array(bstr):
         return np.fromstring(bstr, np.uint8)
@@ -230,7 +230,7 @@ class AirSimClientBase:
     @staticmethod
     def get_public_fields(obj):
         return [attr for attr in dir(obj)
-                             if not (attr.startswith("_") 
+                             if not (attr.startswith("_")
                                 or inspect.isbuiltin(attr)
                                 or inspect.isfunction(attr)
                                 or inspect.ismethod(attr))]
@@ -371,7 +371,7 @@ class AirSimClientBase:
         # DEY: I don't know why this was there.
         #data = np.flipud(data)
         file.close()
-    
+
         return data, scale
 
     @staticmethod
@@ -438,7 +438,7 @@ class AirSimClientBase:
 
     def ping(self):
         return self.client.call('ping')
-    
+
     def reset(self):
         self.client.call('reset')
 
@@ -516,17 +516,17 @@ class MultirotorClient(AirSimClientBase, object):
 
     def takeoff(self, max_wait_seconds = 15):
         return self.client.call('takeoff', max_wait_seconds)
-        
+
     def land(self, max_wait_seconds = 60):
         return self.client.call('land', max_wait_seconds)
-        
+
     def goHome(self):
         return self.client.call('goHome')
 
     def hover(self):
         return self.client.call('hover')
 
-        
+
     # query vehicle state
     def getMultirotorState(self):
         return MultirotorState.from_msgpack(self.client.call('getMultirotorState'))
@@ -579,7 +579,7 @@ class MultirotorClient(AirSimClientBase, object):
         return self.client.call('moveToPosition', x, y, z, velocity, max_wait_seconds, drivetrain, yaw_mode, lookahead, adaptive_lookahead)
 
     def moveByManual(self, vx_max, vy_max, z_min, duration, drivetrain = DrivetrainType.MaxDegreeOfFreedom, yaw_mode = YawMode()):
-        """Read current RC state and use it to control the vehicles. 
+        """Read current RC state and use it to control the vehicles.
 
         Parameters sets up the constraints on velocity and minimum altitude while flying. If RC state is detected to violate these constraints
         then that RC state would be ignored.
