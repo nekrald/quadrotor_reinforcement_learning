@@ -2,6 +2,19 @@ from code.interfaces import IScheduler, ISchedulerConfig
 from agent import REINFORCEAgent
 
 
+def make_scheduler_config(json_config):
+    raise NotImplementedError
+
+
+def make_scheduler(reinforce_config):
+    raise NotImplementedError
+
+
+class SummaryKeys(object):
+    MEAN_SESSION_REWARD   = "mean_reward"
+    MINIMAL_SESSION_REWARD = "min_reward"
+
+
 class ConfigREINFORCE(ISchedulerConfig):
 
     def __init__(self,
@@ -9,9 +22,9 @@ class ConfigREINFORCE(ISchedulerConfig):
             epoch_count=100,
             sessions_in_epoch=1000,
             max_steps=3000,
-            frames_in_state=4,
             save_period=2000,
             save_path="traindir",
+            summary_file_name="summary.log",
             chekpoint_path=None):
         super(self, ConfigREINFORCE).__init__(env_config)
 
@@ -19,11 +32,13 @@ class ConfigREINFORCE(ISchedulerConfig):
         self.sessions_in_epoch  = sessions_in_epoch
         self.max_steps = max_steps
 
+        # Checkpointing configuration.
         self.save_period = save_period
         self.save_path = save_path
-
         self.checkpoint_path = checkpoint_path
-        self.frames_in_state = frames_in_state
+
+        # Summary writing configuration.
+        self.summary_period = summary_period
 
 
 class REINFORCETrainScheduler(IScheduler):
@@ -38,7 +53,6 @@ class REINFORCETrainScheduler(IScheduler):
 
         self.checkpoint_path = checkpoint_path
         self.frames_in_state = config.frames_in_state
-
 
         self._prepare_agent_config()
 
@@ -112,4 +126,7 @@ class REINFORCETrainScheduler(IScheduler):
                     # Save the network
                     pass
             mean_reward = np.mean(reward_list)
+
+    def _write_summary(self):
+        raise NotImplementedError
 
