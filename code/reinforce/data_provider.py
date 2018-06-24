@@ -2,11 +2,12 @@ from typing import List
 
 from request import RequestType, IRequest, ImageRequest, \
         VelocityRequest, PositionRequest
+from network import NetworkConfig
 from transform import ITransform
 from enum import Enum
 
 
-class StateType(Enum):
+class StateReturnType(Enum):
     SHAPED_NP_ARRAY       = 1
     SHAPED_TENSOR         = 2
     FLAT_NP_ARRAY         = 3
@@ -23,12 +24,12 @@ class DataProviderConfig(object):
             request_array: List[IRequest],
             transform_array: List[ITransform],
             frame_stacking_factor: int,
-            state_return_type:):
+            state_return_type: StateReturnType):
 
         self.request_array = request_array
         self.transform_array = transform_array
         self.frame_stacking_factor = frame_stacking_factor
-        self.state_return_description
+        self.state_return_type = state_return_type
 
 
 class IDataProvider(object):

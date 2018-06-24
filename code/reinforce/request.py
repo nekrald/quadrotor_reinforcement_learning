@@ -2,6 +2,14 @@ from enum import Enum
 from client import AirSimImageType
 
 
+def make_request_array_from_json(json_request_config):
+    raise NotImplementedError
+
+
+def make_request_from_json(json_request_config):
+    raise NotImplementedError
+
+
 class RequestType(Enum):
     VELOCITY = 1
     POSITION = 2
