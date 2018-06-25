@@ -4,7 +4,7 @@ import math
 import numpy as np
 
 from enum import Enum
-from AirSimClient import AirSimImageType, ImageRequest
+from client.AirSimClient import AirSimImageType, ImageRequest
 from custom.constants import RootConfigKeys, RewardConfigKeys
 
 from scipy.spatial.distance import cityblock
@@ -31,6 +31,7 @@ class RewardInfo(self):
         self.quad_vel = None
         self.quad_position = None
         self.desired_requests = None
+        self.desired_transforms = None
         self.last_reward = None
         self.epoch_reward_sum = None
         self.collision_info = None
